@@ -70,8 +70,7 @@ protected:
 
 	void GeneratePoseMatchInfos(UAnimSequence* pAnimSeq, const FBoneContainer& BoneCont);
 
-	void GeneratePoseMatchInfo(
-		USkeleton* pSkel, FCompactPose& PrevPose, FCompactPose& CurPose, FPoseMatchInfo& OutInfo);
+	void GeneratePoseMatchInfo(FCompactPose& PrevPose, FCompactPose& CurPose, FPoseMatchInfo& OutInfo);
 
 	void DrawPoseMatchInfo(UAnimSequence* pAnimSeq);
 	void DrawPoseMatchInfo(const TArray<FPoseMatchInfo>& MatchInfos);
@@ -82,9 +81,10 @@ protected:
 
 	void AnalyzeMotion(const FPoseMatchInfo& MatchInfo);
 
-	bool CanBeTransition(float HalfBlendTime);
+	bool CanBeTransition();
 
 	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones);
+	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const FVector& DestPos);
 
 	void CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 EndFrame, const FBoneContainer& RequiredBones);
 
@@ -101,6 +101,7 @@ protected:
 	TMap<UAnimSequence*, TArray<int32>> AnimMatchFrames;
 	TMap<UAnimSequence*, TArray<FHitSection>> AnimHitSections;
 	TMap<UAnimSequence*, TArray<FPoseMatchInfo>> AnimPoseInfos;
+	TMap<UAnimSequence*, TArray<FMotionClip>> AnimMotionClips;
 
 	TArray<FAnimPlayer> AnimPlayers;
 
