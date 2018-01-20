@@ -11,9 +11,7 @@ public class VirtualBallManager : ModuleRules
         //PrivateIncludePaths.Add("Runtime/AnimGraphRuntime/Private");
 
         PublicDependencyModuleNames.AddRange(new string[] {
-            "Core", "CoreUObject", "Engine", "InputCore", "AnimationCore", "AnimGraph", "AnimGraphRuntime" });
-
-        //PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GraphEditor", });
+            "Core", "CoreUObject", "Engine", "InputCore", "AnimationCore", "AnimGraph", "AnimGraphRuntime"});
 
         PrivateDependencyModuleNames.AddRange(new string[] {
               "UnrealED", "GraphEditor", "AnimGraph", "AnimGraphRuntime", "BlueprintGraph"});

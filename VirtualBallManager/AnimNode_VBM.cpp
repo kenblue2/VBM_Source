@@ -29,14 +29,6 @@ void FAnimNode_VBM::Update_AnyThread(const FAnimationUpdateContext& Context)
 	EvaluateGraphExposedInputs.Execute(Context);
 	Result.Update(Context);
 
-	//UAnimInstance* pAnimInstance = Cast<UAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject());
-	//if (pAnimInstance == NULL)
-	//	return;
-
-	//AVBM_Pawn* pVBMPawn = Cast<AVBM_Pawn>(pAnimInstance->TryGetPawnOwner());
-	//if (pVBMPawn == NULL)
-	//	return;
-
 	// update animplayers
 	if (bIdleState == false)
 	{
@@ -59,6 +51,8 @@ void FAnimNode_VBM::Evaluate_AnyThread(FPoseContext& Output)
 {
 	Result.Evaluate(Output);
 
+	ResultPose.CopyBonesFrom(Output.Pose);
+
 	if (AnimPlayers.Num() > 0)
 	{
 		TArray<FCompactPose> AnimPoses;
@@ -67,7 +61,6 @@ void FAnimNode_VBM::Evaluate_AnyThread(FPoseContext& Output)
 
 		FCompactPose AnimPose;
 		AnimPose.CopyBonesFrom(Output.Pose);
-		ResultPose.CopyBonesFrom(Output.Pose);
 
 		FBlendedCurve EmptyCurve;
 
@@ -111,7 +104,6 @@ bool FAnimNode_VBM::CanBeTransition(float HalfBlendTime)
 		{
 			float MatchTime = pAnim->GetTimeAtFrame(MatchFrame);
 
-			//if (MatchTime - HalfBlendTime < CurTime && CurTime < MatchTime)
 			if (MatchTime < CurTime && CurTime < MatchTime + HalfBlendTime)
 			{
 				bIdleState = true;
@@ -153,10 +145,23 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 
 	if (AnimPlayers.Num() <= 0)
 	{
-		UAnimSequence* pAnim = AnimPoseInfos.CreateIterator()->Key;
-		if (pAnim != NULL)
+		TArray<UAnimSequence*> pAnims;
+		AnimPoseInfos.GetKeys(pAnims);
+
+		if (pAnims.Num() > 0)
 		{
-			AnimPlayers.Add(FAnimPlayer(pAnim, 0.f, 0.2f, 1.f));
+			UAnimSequence* pCurAnim = pAnims[rand() % pAnims.Num()];
+			TArray<int32>* pMatchFrames = AnimMatchFrames.Find(pCurAnim);
+
+			if (pMatchFrames != NULL && pMatchFrames->Num() > 0)
+			{
+				int32 MatchIndex = rand() % (pMatchFrames->Num() - 1);
+				int32 MatchFrame = (*pMatchFrames)[MatchIndex];
+
+				float MatchTime = pCurAnim->GetTimeAtFrame(MatchFrame);
+
+				AnimPlayers.Add(FAnimPlayer(pCurAnim, MatchTime, 0.2f, 1.f));
+			}
 		}
 	}
 	else
@@ -197,29 +202,11 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			}
 		}
 
-		//DrawPose(ResultPose, FColor::White);
-		//DrawAnimPoses(AnimPlayers.Last().pAnim, RequiredBones, AnimPlayers.Last().Align);
+		if (pVBMPawn->pDestPawn != NULL)
+		{
+			//pVBMPawn->HitPos = ;
+		}
 	}
-
-	//UAnimSequence* pAnim = Cast<UAnimSequence>(Anims[AnimIndex]);
-	//if (pAnim != NULL)
-	//{
-	//	DrawPoseMatchInfo(pAnimSeq);
-	//}
-
-	//DrawAnimPoses(pAnim, RequiredBones);
-
-	//FVector RootPos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Root"));
-
-	//for (FVector& HitVel : NextHitVels)
-	//{
-	//	DrawDebugLine(GWorld, RootPos, RootPos + HitVel, FColor::Magenta);
-	//}
-
-	//for (FVector& HitPos : NextHitPoss)
-	//{
-	//	DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Magenta);
-	//}
 
 	for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
 	{
@@ -230,27 +217,29 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
 	}
 
-	//TArray<FVector> HitPosList;
+/*
+	TArray<FVector> HitPosList;
 
-	//for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
-	//{
-	//	APawn* pPawn = PawnIt->Get();
-	//	if (pPawn == NULL)
-	//		continue;
+	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
+	{
+		APawn* pPawn = PawnIt->Get();
+		if (pPawn == NULL)
+			continue;
 
-	//	TArray<UActorComponent*> Components = pPawn->GetComponentsByClass(USkeletalMeshComponent::StaticClass());
-	//	if (Components.Num() == 0)
-	//		continue;
+		TArray<UActorComponent*> Components = pPawn->GetComponentsByClass(USkeletalMeshComponent::StaticClass());
+		if (Components.Num() == 0)
+			continue;
 
-	//	USkeletalMeshComponent* pSkelComp = Cast<USkeletalMeshComponent>(Components[0]);
-	//	if (pSkelComp == NULL)
-	//		continue;
+		USkeletalMeshComponent* pSkelComp = Cast<USkeletalMeshComponent>(Components[0]);
+		if (pSkelComp == NULL)
+			continue;
 
-	//	FVector HitPos = pSkelComp->GetBoneLocation(FName("Right_Ankle_Joint_01"));
-	//	DrawDebugSphere(GWorld, HitPos, 5.f, 8, FColor::Red);
+		FVector HitPos = pSkelComp->GetBoneLocation(FName("Right_Ankle_Joint_01"));
+		DrawDebugSphere(GWorld, HitPos, 5.f, 8, FColor::Red);
 
-	//	HitPosList.Add(HitPos);
-	//}
+		HitPosList.Add(HitPos);
+	}
+*/
 
 	FVector AnklePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Ankle_Joint_01"));
 	FVector KneePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Knee_Joint_01"));
@@ -274,7 +263,7 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 	UAnimSequence* pNextAnim = pAnims[rand() % pAnims.Num()];
 	TArray<int32>* pMatchFrames = AnimMatchFrames.Find(pNextAnim);
 
-	if (pMatchFrames == NULL || pMatchFrames->Num() <= 0)
+	if (pMatchFrames == NULL || pMatchFrames->Num() <= 0 || ResultPose.IsValid() == false)
 		return false;
 
 	FVector CurHipPos;
@@ -335,7 +324,7 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 	if (pHitSections == NULL)
 		return;
 
-	FHitSection SelectedHitSec;
+	//FHitSection SelectedHitSec;
 
 	for (FHitSection& HitSec : *pHitSections)
 	{

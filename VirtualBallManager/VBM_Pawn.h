@@ -31,4 +31,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	bool PlayMotion = false;
 	
+	AVBM_Pawn* pDestPawn;
+
+	FVector HitPos;
 };

@@ -2,8 +2,10 @@
 
 #include "VirtualBallManagerGameModeBase.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "VBM_AnimInstance.h"
 #include "DrawDebugHelpers.h"
+#include "VBM_AnimInstance.h"
+#include "VBM_Pawn.h"
+
 
 #pragma optimize("", off)
 
@@ -16,8 +18,41 @@ AVirtualBallManagerGameModeBase::AVirtualBallManagerGameModeBase()
 }
 
 //-------------------------------------------------------------------------------------------------
+void AVirtualBallManagerGameModeBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+}
+
+//-------------------------------------------------------------------------------------------------
+void AVirtualBallManagerGameModeBase::CalcBallTrajectory(const FVector& BeginPos, const FVector& EndPos, int32 NumBounds)
+{
+	BallTrajectory;
+}
+
+//-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
+	if (PassOrders.Num() >= 3)
+	{
+		PassOrders[0]->pDestPawn = PassOrders[1];
+		PassOrders[1]->pDestPawn = PassOrders[2];
+
+		//PassOrders.RemoveAt(0);
+
+		if (BallTrajectory.Num() == 0)
+		{
+			const FVector& BeginPos = PassOrders[0]->HitPos;
+			const FVector& EndPos = PassOrders[1]->HitPos;
+
+			if (BeginPos != EndPos)
+			{
+				CalcBallTrajectory(BeginPos, EndPos, 1);
+			}
+		}
+	}
+
+	
+
 	TArray<FVector> HitPosList;
 
 	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)

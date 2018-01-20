@@ -106,12 +106,12 @@ protected:
 
 	FCompactPose ResultPose;
 
-private:
-
 	TArray<FVector> NextHitVels;
 	TArray<FVector> NextHitPoss;
 
 	TArray<TArray<FVector>> BallTrajectories;
+
+	FHitSection SelectedHitSec;
 
 	bool bIdleState;
 };
