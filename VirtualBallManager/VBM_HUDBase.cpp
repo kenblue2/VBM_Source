@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "VBM_HUDBase.h"
+#include "Animation/AnimInstance.h"
 
 
 #pragma optimize("", off)

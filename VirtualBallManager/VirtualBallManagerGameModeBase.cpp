@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "VirtualBallManagerGameModeBase.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "VBM_AnimInstance.h"
 #include "DrawDebugHelpers.h"
 
 #pragma optimize("", off)
@@ -18,26 +20,35 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
 	TArray<FVector> HitPosList;
 
-	//for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
-	//{
-	//	APawn* pPawn = PawnIt->Get();
-	//	if (pPawn == NULL)
-	//		continue;
+	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
+	{
+		APawn* pPawn = PawnIt->Get();
+		if (pPawn == NULL)
+			continue;
 
-	//	TArray<UActorComponent*> Components = pPawn->GetComponentsByClass(USkeletalMeshComponent::StaticClass());
-	//	if (Components.Num() == 0)
-	//		continue;
+		TArray<UActorComponent*> ActorComps = pPawn->GetComponentsByClass(USkeletalMeshComponent::StaticClass());
+		if (ActorComps.Num() == 0)
+			continue;
 
-	//	USkeletalMeshComponent* pSkelComp = Cast<USkeletalMeshComponent>(Components[0]);
-	//	if (pSkelComp == NULL)
-	//		continue;
+		USkeletalMeshComponent* pSkelComp = Cast<USkeletalMeshComponent>(ActorComps[0]);
+		if (pSkelComp == NULL)
+			continue;
 
-	//	FVector HitPos = pSkelComp->GetBoneLocation(FName("Right_Ankle_Joint_01"));
-	//	DrawDebugSphere(GWorld, HitPos, 5.f, 8, FColor::Red);
+		UVBM_AnimInstance* pAnimInst = Cast<UVBM_AnimInstance>(pSkelComp->GetAnimInstance());
+		if (pAnimInst == NULL)
+			continue;
 
-	//	HitPosList.Add(HitPos);
-	//}
+		if (pAnimInst->IdleState)
+		{
+			//pAnimInst->IdleState = false;
+		}
 
+		FVector HitPos = pSkelComp->GetBoneLocation(FName("Right_Ankle_Joint_01"));
+		DrawDebugSphere(GWorld, HitPos, 5.f, 8, FColor::Red);
+
+		HitPosList.Add(HitPos);
+	}
+/*
 	if (HitPosList.Num() == 2)
 	{
 		FVector P0 = HitPosList[0];
@@ -71,6 +82,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			DrawDebugLine(GWorld, MovePosList[IdxPos - 1], MovePosList[IdxPos], FColor::Magenta);
 		}
 	}
+*/
 }
 
 

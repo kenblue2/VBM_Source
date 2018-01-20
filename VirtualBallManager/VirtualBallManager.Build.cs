@@ -10,16 +10,20 @@ public class VirtualBallManager : ModuleRules
 
         //PrivateIncludePaths.Add("Runtime/AnimGraphRuntime/Private");
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AnimationCore" });
+        PublicDependencyModuleNames.AddRange(new string[] {
+            "Core", "CoreUObject", "Engine", "InputCore", "AnimationCore", "AnimGraph", "AnimGraphRuntime" });
 
-		//PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GraphEditor", });
+        //PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "GraphEditor", });
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-		
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
+        PrivateDependencyModuleNames.AddRange(new string[] {
+              "UnrealED", "GraphEditor", "AnimGraph", "AnimGraphRuntime", "BlueprintGraph"});
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
-	}
+        // Uncomment if you are using Slate UI
+        // PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+
+        // Uncomment if you are using online features
+        // PrivateDependencyModuleNames.Add("OnlineSubsystem");
+
+        // To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+    }
 }
