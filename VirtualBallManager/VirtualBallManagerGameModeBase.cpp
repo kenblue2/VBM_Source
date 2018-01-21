@@ -32,23 +32,56 @@ void AVirtualBallManagerGameModeBase::CalcBallTrajectory(const FVector& BeginPos
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
-	if (PassOrders.Num() >= 3)
+	if (PassOrders.Num() == 0)
+		return;
+
+	//for (int32 IdxOrder = 1; IdxOrder < PassOrders.Num(); ++IdxOrder)
+	//{
+	//	FVector BeginPos = PassOrders[IdxOrder - 1]->PlayerPos;
+	//	FVector EndPos = PassOrders[IdxOrder]->PlayerPos;
+
+	//	BeginPos.Z = 1.f;
+	//	EndPos.Z = 1.f;
+
+	//	DrawDebugLine(GetWorld(), BeginPos, EndPos, FColor::Yellow, false, -1.0f, 0, 1.f);
+	//}
+
+	//for (auto& PassOrder : PassOrders)
+	//{
+	//	DrawDebugSphere(GetWorld(), PassOrder->PlayerPos, 10.f, 32, FColor::Red);
+	//}
+
+	if (PassOrders.Num() < 3)
+		return;
+
+	for (auto& PassOrder : PassOrders)
+	{
+		if (PassOrder == NULL)
+			return;
+	}
+
+	//if (BallTrajectory.Num() == 0)
+	//{
+	//	const FVector& BeginPos = PassOrders[0]->HitPos;
+	//	const FVector& EndPos = PassOrders[1]->HitPos;
+
+	//	if (BeginPos != EndPos)
+	//	{
+	//		CalcBallTrajectory(BeginPos, EndPos, 1);
+	//	}
+	//}
+
+	if (PassOrders[0]->IsPlaying == false)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
 		PassOrders[1]->pDestPawn = PassOrders[2];
 
-		//PassOrders.RemoveAt(0);
-
-		if (BallTrajectory.Num() == 0)
-		{
-			const FVector& BeginPos = PassOrders[0]->HitPos;
-			const FVector& EndPos = PassOrders[1]->HitPos;
-
-			if (BeginPos != EndPos)
-			{
-				CalcBallTrajectory(BeginPos, EndPos, 1);
-			}
-		}
+		PassOrders[0]->IsPlaying = true;
+	}
+	else if (PassOrders[0]->pDestPawn == NULL)
+	{
+		PassOrders[0]->IsPlaying = false;
+		PassOrders.RemoveAt(0);
 	}
 
 	

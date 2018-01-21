@@ -99,8 +99,7 @@ bool FAnimNode_VBM::CanBeTransition()
 
 	if (CurTime < EndTime)
 		return false;
-	
-	bIdleState = true;
+
 	return true;
 }
 
@@ -132,6 +131,10 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		}
 	}
 
+	AVBM_Pawn* pVBMPawn = Cast<AVBM_Pawn>(InAnimInstance->TryGetPawnOwner());
+	if (pVBMPawn == NULL)
+		return;
+
 	if (AnimPlayers.Num() <= 0)
 	{
 		TArray<UAnimSequence*> pAnims;
@@ -145,9 +148,10 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			if (pMotionClips != NULL && pMotionClips->Num() > 0)
 			{
 				FMotionClip CurClip = (*pMotionClips)[rand() % pMotionClips->Num()];
-				float BeginTime = pAnim->GetTimeAtFrame(CurClip.BeginFrame);
+				//float BeginTime = pAnim->GetTimeAtFrame(CurClip.BeginFrame);
+				float BeginTime = pAnim->GetTimeAtFrame(CurClip.EndFrame);
 
-				FAnimPlayer AnimPlayer(pAnim, BeginTime, 0.2f, 1.f);
+				FAnimPlayer AnimPlayer(pAnim, BeginTime, 0.3f, 1.f);
 				AnimPlayer.MotionClip = CurClip;
 
 				AnimPlayers.Add(AnimPlayer);
@@ -156,69 +160,59 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	}
 	else
 	{
-		AVBM_Pawn* pVBMPawn = Cast<AVBM_Pawn>(InAnimInstance->TryGetPawnOwner());
-		if (pVBMPawn == NULL)
-			return;
-
-		if (CanBeTransition() /*&& pVBMPawn->pDestPawn != NULL*/)
+		if (CanBeTransition())
 		{
-			//FAnimPlayer NextPlayer;
-			//pVBMPawn->HitPos = CreateNextPlayer(NextPlayer, RequiredBones, pVBMPawn->pDestPawn->GetActorLocation());
+			if (bIdleState == false)
+			{
+				bIdleState = true;
+				pVBMPawn->pDestPawn = NULL;
+			}
 
-			if (pVBMPawn->PlayMotion)
-			//if (pVBMPawn->HitPos != FVector::ZeroVector &&
-			//	pVBMPawn->pDestPawn != NULL &&				
-			//	pVBMPawn->pDestPawn->HitPos != FVector::ZeroVector)
+			if (pVBMPawn->pDestPawn != NULL)
 			{
 				FAnimPlayer NextPlayer;
-				if (CreateNextPlayer(NextPlayer, RequiredBones))
-				//if (CreateNextPlayer(NextPlayer, RequiredBones, pVBMPawn->pDestPawn))
+				if (CreateNextPlayer(NextPlayer, RequiredBones, pVBMPawn))
+				{
+					CreateNextHitInfo(NextPlayer, pVBMPawn, RequiredBones);
+				}
+
+				if (pVBMPawn->IsPlaying)
 				{
 					AnimPlayers.Last().Stop();
 					AnimPlayers.Add(NextPlayer);
 
-					//FVector PlayerPos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Root"));
-					//PlayerPos.Z = 0.f;
-					FVector RootPos =
-						//ResultPose[FCompactPoseBoneIndex(0)].GetTranslation() +
-						InAnimInstance->GetSkelMeshComponent()->GetComponentLocation();
-					RootPos.Z = 0.f;
-
-					CreateNextHitInfo(NextPlayer, RootPos, RequiredBones);
-
-					BallTrajectories.Empty();
-
-					int32 NumHit = NextHitPoss.Num();
-					for (int32 IdxHit = 0; IdxHit < NumHit; ++IdxHit)
-					{
-						TArray<FVector> Trajectory;
-						GenerateBallTrajectory(Trajectory, NextHitPoss[IdxHit], NextHitVels[IdxHit]);
-
-						BallTrajectories.Add(Trajectory);
-					}
-
 					bIdleState = false;
-					pVBMPawn->PlayMotion = false;
 				}
 			}
 		}
 
-		for (auto& BallTrajectory : BallTrajectories)
+		if (pVBMPawn->IsPlaying && pVBMPawn->pDestPawn != NULL)
 		{
-			for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
+			for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
 			{
-				DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Cyan);
+				const FVector& HitPos = NextHitPoss[IdxHit];
+				const FVector& HitVel = NextHitVels[IdxHit];
+
+				DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
+				DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
 			}
+
+			for (auto& BallTrajectory : BallTrajectories)
+			{
+				for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Black);
+				}
+			}
+
+			for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
+			{
+				DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
+			}
+
+			DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
+			DrawDebugSphere(GWorld,pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
 		}
-	}
-
-	for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
-	{
-		const FVector& HitPos = NextHitPoss[IdxHit];
-		const FVector& HitVel = NextHitVels[IdxHit];
-
-		DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
-		DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
 	}
 
 /*
@@ -245,22 +239,92 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	}
 */
 
-	FVector AnklePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Ankle_Joint_01"));
-	FVector KneePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Knee_Joint_01"));
-	FVector ToePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Toe_Joint_01"));
+	//FVector AnklePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Ankle_Joint_01"));
+	//FVector KneePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Knee_Joint_01"));
+	//FVector ToePos = InAnimInstance->GetSkelMeshComponent()->GetBoneLocation(FName("Right_Toe_Joint_01"));
 
-	FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
-	FVector HitPos = InAnimInstance->GetSkelMeshComponent()->GetSocketLocation(FName("Right_Hit_Socket"));
+	//FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+	//FVector HitPos = InAnimInstance->GetSkelMeshComponent()->GetSocketLocation(FName("Right_Hit_Socket"));
 
-	DrawDebugLine(GWorld, HitPos, HitPos + HitDir * 100.f, FColor::Red);
+	//DrawDebugLine(GWorld, HitPos, HitPos + HitDir * 100.f, FColor::Red);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const AVBM_Pawn* pDestPawn)
+bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const AVBM_Pawn* pPawn)
 {
-	FVector CurPos = ResultPose[FCompactPoseBoneIndex(0)].GetTranslation();
+	if (pPawn == NULL || pPawn->pDestPawn == NULL)
+		return false;
 
+	FVector PlayerPos = pPawn->PlayerPos;
+	FVector DestPos = pPawn->pDestPawn->PlayerPos;
+
+	FVector PassDir = (DestPos - PlayerPos).GetSafeNormal2D();
+
+	float MinAngle = FLT_MAX;
+	FAnimPlayer MinPlayer;
+
+	for (auto& AnimMotionClip : AnimMotionClips)
+	{
+		UAnimSequence* pNextAnim = AnimMotionClip.Key;
+		if (pNextAnim == NULL)
+			continue;
+
+		for (auto& MotionClip : AnimMotionClip.Value)
+		{
+			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
+
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
+			{
+				NextPlayer.MotionClip = MotionClip;
+				NextPlayer.Align = CalcAlignTransoform(NextPlayer, RequiredBones);
+			}
+
+			FVector ClipHitDir = CalcHitDir(pNextAnim, MotionClip, RequiredBones);
+			ClipHitDir = NextPlayer.Align.TransformVector(ClipHitDir);
+
+			float Angle = FMath::Abs(FMath::Acos(PassDir | ClipHitDir));
+			if (Angle < MinAngle)
+			{
+				MinAngle = Angle;
+				MinPlayer = NextPlayer;
+			}
+		}
+	}
+
+	OutPlayer = MinPlayer;
 	return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+FTransform FAnimNode_VBM::CalcAlignTransoform(const FAnimPlayer& NextPlayer, const FBoneContainer& RequiredBones)
+{
+	FBlendedCurve EmptyCurve;
+
+	FCompactPose AnimPose;
+	AnimPose.SetBoneContainer(&RequiredBones);
+
+	const FAnimPlayer& CurPlayer = AnimPlayers.Last();
+
+	float EndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.EndFrame);
+	CurPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(EndTime));
+
+	FVector CurFrontDir = CalcFrontDir(AnimPose);
+	CurFrontDir = CurPlayer.Align.TransformVector(CurFrontDir);
+
+	AnimPose[FCompactPoseBoneIndex(0)] *= CurPlayer.Align;
+	FVector CurHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
+
+	float BeginTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.BeginFrame);
+	NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(BeginTime));
+
+	FVector NextFrontDir = CalcFrontDir(AnimPose);
+	FVector NextHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
+
+	FQuat AlignQuat = FQuat::FindBetween(NextFrontDir, CurFrontDir);
+	FVector AlignPos = CurHipPos - NextHipPos;
+	AlignPos.Z = 0.f;
+
+	return FTransform(-NextHipPos) * FTransform(AlignQuat) * FTransform(NextHipPos) * FTransform(AlignPos);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -279,28 +343,27 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 		return false;
 
 	FMotionClip NextClip = (*pMotionClips)[rand() % pMotionClips->Num()];
+	
 	float BeginTime = pNextAnim->GetTimeAtFrame(NextClip.BeginFrame);
 
-	
-
-	FCompactPose AnimPose;
-	AnimPose.SetBoneContainer(&RequiredBones);
-
-	FBlendedCurve EmptyCurve;
-
-	const FAnimPlayer& CurPlayer = AnimPlayers.Last();
-
-	float EndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.EndFrame);
-	CurPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(EndTime));
-
-	FVector CurFrontDir = CalcFrontDir(pNextAnim->GetSkeleton(), AnimPose);
-	CurFrontDir = CurPlayer.Align.TransformVector(CurFrontDir);
-
-	AnimPose[FCompactPoseBoneIndex(0)] *= CurPlayer.Align;
-	FVector CurHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
-	
+/*
 	FTransform AlignTransform;
 	{
+		FCompactPose AnimPose;
+		FBlendedCurve EmptyCurve;
+		AnimPose.SetBoneContainer(&RequiredBones);
+
+		const FAnimPlayer& CurPlayer = AnimPlayers.Last();
+
+		float EndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.EndFrame);
+		CurPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(EndTime));
+
+		FVector CurFrontDir = CalcFrontDir(pNextAnim->GetSkeleton(), AnimPose);
+		CurFrontDir = CurPlayer.Align.TransformVector(CurFrontDir);
+
+		AnimPose[FCompactPoseBoneIndex(0)] *= CurPlayer.Align;
+		FVector CurHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
+
 		pNextAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(BeginTime));
 
 		FVector NextFrontDir = CalcFrontDir(pNextAnim->GetSkeleton(), AnimPose);
@@ -314,31 +377,21 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 			FTransform(-NextHipPos) * FTransform(AlignQuat) * FTransform(NextHipPos) *
 			FTransform(AlignPos);
 	}
-
-	FAnimPlayer NextPlayer(pNextAnim, BeginTime, 0.2f, 0.f);
-	NextPlayer.MotionClip = NextClip;
-	NextPlayer.Align = AlignTransform;
+*/
+	
+	FAnimPlayer NextPlayer(pNextAnim, BeginTime);
+	{
+		NextPlayer.MotionClip = NextClip;
+		NextPlayer.Align = CalcAlignTransoform(NextPlayer, RequiredBones);
+	}
 
 	OutPlayer = NextPlayer;
-
-	//CalcHitDir(pNextAnim, NextClip.BeginFrame, NextClip.EndFrame, RequiredBones);
-
-	//for (FVector& HitVel : NextHitVels)
-	//{
-	//	HitVel = AlignTransform.TransformVector(HitVel);
-	//}
-
-	//for (FVector& HitPos : NextHitPoss)
-	//{
-	//	HitPos = AlignTransform.TransformPosition(HitPos);
-	//}
-
 	return true;
 }
 
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::CreateNextHitInfo(
-	const FAnimPlayer& NextPlayer, const FVector& PlayerPos, const FBoneContainer& RequiredBones)
+	const FAnimPlayer& NextPlayer, const AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones)
 {
 	CalcHitDir(NextPlayer.pAnim, NextPlayer.MotionClip.HitBeginFrame, NextPlayer.MotionClip.HitEndFrame, RequiredBones);
 
@@ -349,8 +402,55 @@ void FAnimNode_VBM::CreateNextHitInfo(
 
 	for (FVector& HitPos : NextHitPoss)
 	{
-		HitPos = NextPlayer.Align.TransformPosition(HitPos) + PlayerPos;
+		HitPos = NextPlayer.Align.TransformPosition(HitPos) + pPawn->GetActorLocation();
 	}
+
+	BallTrajectories.Empty();
+
+	float MinDist = FLT_MAX;
+
+	for (int32 IdxHit = 0; IdxHit < NextHitPoss.Num(); ++IdxHit)
+	{
+		TArray<FVector> Trajectory;
+		GenerateBallTrajectory(Trajectory, NextHitPoss[IdxHit], NextHitVels[IdxHit]);
+
+		float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size2D();
+
+		if (Dist < MinDist)
+		{
+			MinDist = Dist;
+			PassTrajectory = Trajectory;
+		}
+
+		BallTrajectories.Add(Trajectory);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+FVector FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones)
+{
+	FVector AvgHitDir = FVector::ZeroVector;
+
+	for (int32 Frame = Clip.HitBeginFrame; Frame < Clip.HitEndFrame; ++Frame)
+	{
+		float HitTime = pAnim->GetTimeAtFrame(Frame);
+
+		FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+		FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+
+		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+
+		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
+		if (pMatchInfos != NULL)
+		{
+			float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+
+			AvgHitDir += HitDir * Speed;
+		}
+	}
+
+	return AvgHitDir.GetSafeNormal2D();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -418,12 +518,12 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 }
 
 //-------------------------------------------------------------------------------------------------
-FVector FAnimNode_VBM::CalcFrontDir(USkeleton* pSkel, const FCompactPose& AnimPose, FVector* pOutHipPos)
+FVector FAnimNode_VBM::CalcFrontDir(const FCompactPose& AnimPose, FVector* pOutHipPos)
 {
 	FCSPose<FCompactPose> CSPose;
 	CSPose.InitPose(AnimPose);
 
-	const FReferenceSkeleton& RefSkel = pSkel->GetReferenceSkeleton();
+	const FReferenceSkeleton& RefSkel = AnimPose.GetBoneContainer().GetReferenceSkeleton();
 
 	int32 HipIndex = RefSkel.FindBoneIndex(FName("Hip"));
 	int32 LThighIndex = RefSkel.FindBoneIndex(FName("Left_Thigh_Joint_01"));
@@ -457,7 +557,7 @@ void FAnimNode_VBM::AlignPose(USkeleton* pSkel, FCompactPose& AnimPose, FQuat* p
 {
 	FCompactPoseBoneIndex RootIndex(0);
 
-	FVector FrontDir = CalcFrontDir(pSkel, AnimPose);
+	FVector FrontDir = CalcFrontDir(AnimPose);
 	FVector RootPos = AnimPose[RootIndex].GetTranslation();
 
 	FQuat AlignQuat = FQuat::FindBetween(FrontDir, FVector::ForwardVector);

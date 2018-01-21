@@ -28,10 +28,10 @@ public:
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
-	bool PlayMotion = false;
+	bool IsPlaying;
 	
 	AVBM_Pawn* pDestPawn;
 
+	FVector PlayerPos;
 	FVector HitPos;
 };

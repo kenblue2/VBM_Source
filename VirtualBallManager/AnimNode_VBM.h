@@ -61,7 +61,7 @@ protected:
 
 	void AlignPose(USkeleton* pSkel, FCompactPose& AnimPose, FQuat* pOutQuat = NULL);
 
-	FVector CalcFrontDir(USkeleton* pSkel, const FCompactPose& AnimPose, FVector* pOutHipPos = NULL);
+	FVector CalcFrontDir(const FCompactPose& AnimPose, FVector* pOutHipPos = NULL);
 
 	void DrawPose(const FCompactPose& Pose, const FColor& Color);
 
@@ -84,15 +84,20 @@ protected:
 	bool CanBeTransition();
 
 	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones);
-	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const class AVBM_Pawn* pDestPawn);
+	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const class AVBM_Pawn* pPawn);
 
 	void CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 EndFrame, const FBoneContainer& RequiredBones);
+
+	FVector CalcHitDir(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones);
 
 	FVector CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont);
 
 	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVe);
 
-	void CreateNextHitInfo(const FAnimPlayer& NextPlayer, const FVector& PlayerPos, const FBoneContainer& RequiredBones);
+	void CreateNextHitInfo(const FAnimPlayer& NextPlayer, const AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones);
+
+	FTransform CalcAlignTransoform(const FAnimPlayer& NextPlayer, const FBoneContainer& RequiredBones);
+
 
 	//void SavePoseMatchInfos(const FString& FilePath);
 	//void LoadPoseMatchInfos(const FString& FilePath);
@@ -117,5 +122,7 @@ protected:
 	FHitSection SelectedHitSec;
 
 	bool bIdleState;
+
+	TArray<FVector> PassTrajectory;
 };
 
