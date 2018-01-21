@@ -52,7 +52,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	}
 
 	
-
+/*
 	TArray<FVector> HitPosList;
 
 	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
@@ -78,12 +78,12 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			//pAnimInst->IdleState = false;
 		}
 
-		FVector HitPos = pSkelComp->GetBoneLocation(FName("Right_Ankle_Joint_01"));
+		FVector HitPos = pSkelComp->GetSocketLocation(FName("Right_Hit_Socket"));
 		DrawDebugSphere(GWorld, HitPos, 5.f, 8, FColor::Red);
 
 		HitPosList.Add(HitPos);
 	}
-/*
+
 	if (HitPosList.Num() == 2)
 	{
 		FVector P0 = HitPosList[0];

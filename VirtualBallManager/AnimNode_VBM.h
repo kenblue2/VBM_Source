@@ -84,13 +84,15 @@ protected:
 	bool CanBeTransition();
 
 	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones);
-	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const FVector& DestPos);
+	bool CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContainer& RequiredBones, const class AVBM_Pawn* pDestPawn);
 
 	void CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 EndFrame, const FBoneContainer& RequiredBones);
 
 	FVector CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont);
 
 	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVe);
+
+	void CreateNextHitInfo(const FAnimPlayer& NextPlayer, const FVector& PlayerPos, const FBoneContainer& RequiredBones);
 
 	//void SavePoseMatchInfos(const FString& FilePath);
 	//void LoadPoseMatchInfos(const FString& FilePath);
