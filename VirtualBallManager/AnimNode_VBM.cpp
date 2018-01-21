@@ -182,11 +182,27 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 					AnimPlayers.Add(NextPlayer);
 
 					bIdleState = false;
+
+					PassTrajectory2.Empty();
+
+					GenerateBallTrajectory(
+						PassTrajectory2, pVBMPawn->HitBallPos, pVBMPawn->HitBallVel, pVBMPawn->pDestPawn->HitBallPos);
 				}
 			}
 		}
+		else if (pVBMPawn->IsPlaying)
+		{
+			const FAnimPlayer& CurPlayer = AnimPlayers.Last();
 
-		if (pVBMPawn->IsPlaying && pVBMPawn->pDestPawn != NULL)
+			float HitEndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.HitEndFrame);
+
+			if (CurPlayer.Time > HitEndTime)
+			{
+				pVBMPawn->pDestPawn = NULL;
+			}
+		}
+
+		if (pVBMPawn->pDestPawn)
 		{
 			for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
 			{
@@ -201,17 +217,24 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			{
 				for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
 				{
-					DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Black);
+					DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor(1, 1, 1, 0.5f));
 				}
 			}
 
 			for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
 			{
-				DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
+				DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor(1, 0, 0, 0.5f), false, -1.f, 0, 1.f);
+			}
+
+			for (int32 IdxPos = 1; IdxPos < PassTrajectory2.Num(); ++IdxPos)
+			{
+				DrawDebugLine(GWorld, PassTrajectory2[IdxPos - 1], PassTrajectory2[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
 			}
 
 			DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
-			DrawDebugSphere(GWorld,pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
+			DrawDebugSphere(GWorld, pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
+
+			DrawDebugSphere(GWorld, pVBMPawn->HitBallPos, 3.f, 8, FColor::Red);
 		}
 	}
 
@@ -391,7 +414,7 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::CreateNextHitInfo(
-	const FAnimPlayer& NextPlayer, const AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones)
+	const FAnimPlayer& NextPlayer, AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones)
 {
 	CalcHitDir(NextPlayer.pAnim, NextPlayer.MotionClip.HitBeginFrame, NextPlayer.MotionClip.HitEndFrame, RequiredBones);
 
@@ -419,6 +442,8 @@ void FAnimNode_VBM::CreateNextHitInfo(
 		if (Dist < MinDist)
 		{
 			MinDist = Dist;
+			pPawn->HitBallPos = NextHitPoss[IdxHit];
+			pPawn->HitBallVel = NextHitVels[IdxHit];
 			PassTrajectory = Trajectory;
 		}
 
@@ -499,6 +524,47 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 	{
 		BallPos.X = BeginPos.X + BeginVel.X * Time;
 		BallPos.Y = BeginPos.Y + BeginVel.Y * Time;
+
+		if (Time < t1)
+		{
+			BallPos.Z = BeginPos.Z + (Vz0 - 0.5f * GRAVITY * Time) * Time;
+		}
+		else
+		{
+			float dt = Time - t1;
+
+			BallPos.Z = (Vz1 - 0.5f * GRAVITY * dt) * dt;
+		}
+
+		BallPoss.Add(BallPos);
+	}
+
+	OutTrajectory = BallPoss;
+}
+
+//-------------------------------------------------------------------------------------------------
+void FAnimNode_VBM::GenerateBallTrajectory(
+	TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVel, const FVector& EndPos)
+{
+	FVector AlignedHorVel = (EndPos - BeginPos).GetSafeNormal2D() * BeginVel.Size2D();
+
+	float Pz0 = BeginPos.Z;
+	float Vz0 = BeginVel.Z;
+	float Pz1 = Pz0;
+
+	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * Pz0)) / GRAVITY;
+
+	float Vz1 = GRAVITY * t1 - Vz0;
+
+	float t2 = (Vz1 + FMath::Sqrt(Vz1 * Vz1 - 2.f * GRAVITY * Pz1)) / GRAVITY;
+
+	FVector BallPos;
+	TArray<FVector> BallPoss;
+
+	for (float Time = 0.f; Time < t1 + t2; Time += 0.033f)
+	{
+		BallPos.X = BeginPos.X + AlignedHorVel.X * Time;
+		BallPos.Y = BeginPos.Y + AlignedHorVel.Y * Time;
 
 		if (Time < t1)
 		{

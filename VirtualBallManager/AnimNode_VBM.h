@@ -93,8 +93,9 @@ protected:
 	FVector CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont);
 
 	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVe);
+	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVel, const FVector& EndPos);
 
-	void CreateNextHitInfo(const FAnimPlayer& NextPlayer, const AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones);
+	void CreateNextHitInfo(const FAnimPlayer& NextPlayer, AVBM_Pawn* pPawn, const FBoneContainer& RequiredBones);
 
 	FTransform CalcAlignTransoform(const FAnimPlayer& NextPlayer, const FBoneContainer& RequiredBones);
 
@@ -103,6 +104,8 @@ protected:
 	//void LoadPoseMatchInfos(const FString& FilePath);
 
 protected:
+
+	bool bIdleState;
 
 	TMap<UAnimSequence*, TArray<int32>> AnimHitFrames;
 	TMap<UAnimSequence*, TArray<int32>> AnimMatchFrames;
@@ -121,8 +124,7 @@ protected:
 
 	FHitSection SelectedHitSec;
 
-	bool bIdleState;
-
 	TArray<FVector> PassTrajectory;
+	TArray<FVector> PassTrajectory2;
 };
 

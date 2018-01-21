@@ -7,7 +7,9 @@
 AVBM_Pawn::AVBM_Pawn()
 	: pDestPawn(NULL)
 	, IsPlaying(false)
-	, HitPos(FVector::ZeroVector)
+	, PlayerPos(FVector::ZeroVector)
+	, HitBallPos(FVector::ZeroVector)
+	, HitBallVel(FVector::ZeroVector)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -35,7 +37,7 @@ void AVBM_Pawn::Tick(float DeltaTime)
 		return;
 
 	PlayerPos = pSkelComp->GetBoneLocation(FName("Root"));
-	PlayerPos.Z = 0.f;
+	PlayerPos.Z = 1.f;
 }
 
 // Called to bind functionality to input

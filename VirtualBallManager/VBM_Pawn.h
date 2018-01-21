@@ -33,5 +33,6 @@ public:
 	AVBM_Pawn* pDestPawn;
 
 	FVector PlayerPos;
-	FVector HitPos;
+	FVector HitBallPos;
+	FVector HitBallVel;
 };
