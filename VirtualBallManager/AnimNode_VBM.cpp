@@ -187,6 +187,8 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 
 					GenerateBallTrajectory(
 						PassTrajectory2, pVBMPawn->HitBallPos, pVBMPawn->HitBallVel, pVBMPawn->pDestPawn->HitBallPos);
+
+					AdjustBallTrajectory(PassTrajectory2, pVBMPawn->HitBallVel, pVBMPawn->pDestPawn->HitBallPos);
 				}
 			}
 		}
@@ -286,6 +288,7 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 	float MinAngle = FLT_MAX;
 	FAnimPlayer MinPlayer;
 
+	// select motion clip
 	for (auto& AnimMotionClip : AnimMotionClips)
 	{
 		UAnimSequence* pNextAnim = AnimMotionClip.Key;
@@ -543,6 +546,55 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 }
 
 //-------------------------------------------------------------------------------------------------
+void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVector& BeginVel, const FVector& EndPos)
+{
+	FVector NewBeginVel = BeginVel;
+
+	while (true)
+	{
+		FVector DestPos = Trajectory.Last();
+		FVector DiffPos = DestPos - EndPos;
+
+		int32 BeginIndex = 0;
+
+		for (int32 IdxPos = Trajectory.Num() - 1; IdxPos > 0; --IdxPos)
+		{
+			if (Trajectory[IdxPos - 1].Z < Trajectory[IdxPos].Z)
+			{
+				BeginIndex = IdxPos;
+				break;
+			}
+		}
+
+		int32 MinIndex = BeginIndex;
+		FVector MinDir;
+		float MinDist = FLT_MAX;
+
+		for (int32 IdxPos = BeginIndex; IdxPos < Trajectory.Num(); ++IdxPos)
+		{
+			FVector Diff = EndPos - Trajectory[IdxPos];
+
+			if (MinDist > Diff.Size())
+			{
+				MinDir = Diff;
+				MinDist = Diff.Size();
+				MinIndex = IdxPos;
+			}
+		}
+
+		if (MinDist < 0.1f)
+		{
+			Trajectory.SetNum(MinIndex + 1);
+			break;
+		}
+	
+		NewBeginVel += MinDir * 0.01f;
+
+		GenerateBallTrajectory(Trajectory, Trajectory[0], NewBeginVel, EndPos);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::GenerateBallTrajectory(
 	TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVel, const FVector& EndPos)
 {
@@ -550,7 +602,8 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 
 	float Pz0 = BeginPos.Z;
 	float Vz0 = BeginVel.Z;
-	float Pz1 = Pz0;
+	//float Pz1 = Pz0;
+	float Pz1 = 0.f;
 
 	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * Pz0)) / GRAVITY;
 

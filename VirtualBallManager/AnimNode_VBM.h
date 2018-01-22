@@ -99,6 +99,8 @@ protected:
 
 	FTransform CalcAlignTransoform(const FAnimPlayer& NextPlayer, const FBoneContainer& RequiredBones);
 
+	void AdjustBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginVel, const FVector& EndPos);
+
 
 	//void SavePoseMatchInfos(const FString& FilePath);
 	//void LoadPoseMatchInfos(const FString& FilePath);
