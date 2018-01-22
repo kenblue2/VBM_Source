@@ -4,6 +4,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "VBM_AnimInstance.h"
+#include "AnimNode_VBM.h"
 #include "VBM_Pawn.h"
 
 
@@ -12,7 +13,7 @@
 
 //-------------------------------------------------------------------------------------------------
 AVirtualBallManagerGameModeBase::AVirtualBallManagerGameModeBase()
-	: BallTime(0.f)
+	: pPrevPawn(NULL)
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -21,12 +22,6 @@ AVirtualBallManagerGameModeBase::AVirtualBallManagerGameModeBase()
 void AVirtualBallManagerGameModeBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-}
-
-//-------------------------------------------------------------------------------------------------
-void AVirtualBallManagerGameModeBase::CalcBallTrajectory(const FVector& BeginPos, const FVector& EndPos, int32 NumBounds)
-{
-	BallTrajectory;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -54,12 +49,6 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	if (PassOrders.Num() < 3)
 		return;
 
-	for (auto& PassOrder : PassOrders)
-	{
-		if (PassOrder == NULL)
-			return;
-	}
-
 	//if (BallTrajectory.Num() == 0)
 	//{
 	//	const FVector& BeginPos = PassOrders[0]->HitPos;
@@ -71,17 +60,33 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	//	}
 	//}
 
-	if (PassOrders[0]->IsPlaying == false)
+	if (PassOrders[0]->pDestPawn == NULL)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
-		PassOrders[1]->pDestPawn = PassOrders[2];
-
-		PassOrders[0]->IsPlaying = true;
+		PassOrders[0]->CreateNextPlayer();
 	}
-	else if (PassOrders[0]->pDestPawn == NULL)
+
+	if (PassOrders[1]->pDestPawn == NULL)
 	{
-		PassOrders[0]->IsPlaying = false;
+		PassOrders[1]->pDestPawn = PassOrders[2];
+		PassOrders[1]->CreateNextPlayer();
+
+		PassOrders[0]->PlayHitMotion();
+	}
+	
+	if (PassOrders[0]->bBeginNextMotion)
+	{
+		pPrevPawn = PassOrders[0];
+		PassOrders[0]->pDestPawn = NULL;
 		PassOrders.RemoveAt(0);
+	}
+
+	if (PassOrders[0]->bHitBall)
+	{
+		if (pPrevPawn != NULL && pPrevPawn->pAnimNode != NULL)
+		{
+			pPrevPawn->pAnimNode->PassTrajectory2.Empty();
+		}
 	}
 
 	

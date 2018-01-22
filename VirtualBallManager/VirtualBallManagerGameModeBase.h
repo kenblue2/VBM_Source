@@ -27,16 +27,14 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 	// Allow actors to initialize themselves on the C++ side
 	virtual void PostInitializeComponents() override;
 
-	void CalcBallTrajectory(const FVector& BeginPos, const FVector& EndPos, int32 NumBounds);
-
 public:
 
 	FVector BallPos;
-
-	float BallTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	TArray<class AVBM_Pawn*> PassOrders;
 
 	TArray<FVector> BallTrajectory;
+
+	class AVBM_Pawn* pPrevPawn;
 };

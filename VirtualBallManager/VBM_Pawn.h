@@ -26,10 +26,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void CreateNextPlayer();
+
+	void PlayHitMotion();
+
 public:
 
-	bool IsPlaying;
-	
+	bool bHitBall;
+	bool bBeginNextMotion;
+
 	AVBM_Pawn* pDestPawn;
 
 	FVector PlayerPos;
@@ -37,4 +42,6 @@ public:
 	FVector HitBallVel;
 
 	float HitBallTime;
+
+	struct FAnimNode_VBM* pAnimNode;
 };

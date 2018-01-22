@@ -57,6 +57,10 @@ public:
 	/** Override this to perform game-thread work prior to non-game thread Update() being called */
 	virtual void PreUpdate(const UAnimInstance* InAnimInstance);
 
+	void CreateNextPlayer(class AVBM_Pawn* pPawn);
+
+	void PlayHitMotion(class AVBM_Pawn* pPawn);
+
 protected:
 
 	void AlignPose(USkeleton* pSkel, FCompactPose& AnimPose, FQuat* pOutQuat = NULL);
@@ -108,8 +112,6 @@ protected:
 
 protected:
 
-	bool bIdleState;
-
 	TMap<UAnimSequence*, TArray<int32>> AnimHitFrames;
 	TMap<UAnimSequence*, TArray<int32>> AnimMatchFrames;
 	TMap<UAnimSequence*, TArray<FHitSection>> AnimHitSections;
@@ -127,10 +129,19 @@ protected:
 
 	FHitSection SelectedHitSec;
 
-	TArray<FVector> PassTrajectory;
-	TArray<FVector> PassTrajectory2;
-
 	float BallTime;
 	float BallEndTime;
+
+	FAnimPlayer NextAnimPlayer;
+
+	FBoneContainer BoneContainer;
+
+public:
+
+	bool bHitBall;
+	bool bIdleState;
+
+	TArray<FVector> PassTrajectory;
+	TArray<FVector> PassTrajectory2;
 };
 

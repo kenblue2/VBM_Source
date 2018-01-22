@@ -1,12 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "VBM_Pawn.h"
+#include "AnimNode_VBM.h"
 
 
+//-------------------------------------------------------------------------------------------------
 // Sets default values
 AVBM_Pawn::AVBM_Pawn()
 	: pDestPawn(NULL)
-	, IsPlaying(false)
+	, pAnimNode(NULL)
+	, bHitBall(false)
+	, bBeginNextMotion(false)
 	, HitBallTime(0.f)
 	, PlayerPos(FVector::ZeroVector)
 	, HitBallPos(FVector::ZeroVector)
@@ -17,13 +21,14 @@ AVBM_Pawn::AVBM_Pawn()
 
 }
 
+//-------------------------------------------------------------------------------------------------
 // Called when the game starts or when spawned
 void AVBM_Pawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
+//-------------------------------------------------------------------------------------------------
 // Called every frame
 void AVBM_Pawn::Tick(float DeltaTime)
 {
@@ -41,6 +46,7 @@ void AVBM_Pawn::Tick(float DeltaTime)
 	PlayerPos.Z = 1.f;
 }
 
+//-------------------------------------------------------------------------------------------------
 // Called to bind functionality to input
 void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -48,3 +54,22 @@ void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 }
 
+//-------------------------------------------------------------------------------------------------
+void AVBM_Pawn::CreateNextPlayer()
+{
+	if (pAnimNode != NULL)
+	{
+		bHitBall = false;
+		pAnimNode->CreateNextPlayer(this);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void AVBM_Pawn::PlayHitMotion()
+{
+	if (pAnimNode != NULL)
+	{
+		bBeginNextMotion = false;
+		pAnimNode->PlayHitMotion(this);
+	}
+}
