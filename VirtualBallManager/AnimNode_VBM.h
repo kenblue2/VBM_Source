@@ -101,6 +101,7 @@ protected:
 
 	void AdjustBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginVel, const FVector& EndPos);
 
+	FVector GetMaxHitVel(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones);
 
 	//void SavePoseMatchInfos(const FString& FilePath);
 	//void LoadPoseMatchInfos(const FString& FilePath);
@@ -128,5 +129,8 @@ protected:
 
 	TArray<FVector> PassTrajectory;
 	TArray<FVector> PassTrajectory2;
+
+	float BallTime;
+	float BallEndTime;
 };
 

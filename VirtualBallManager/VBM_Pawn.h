@@ -35,4 +35,6 @@ public:
 	FVector PlayerPos;
 	FVector HitBallPos;
 	FVector HitBallVel;
+
+	float HitBallTime;
 };

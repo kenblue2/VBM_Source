@@ -7,6 +7,7 @@
 AVBM_Pawn::AVBM_Pawn()
 	: pDestPawn(NULL)
 	, IsPlaying(false)
+	, HitBallTime(0.f)
 	, PlayerPos(FVector::ZeroVector)
 	, HitBallPos(FVector::ZeroVector)
 	, HitBallVel(FVector::ZeroVector)

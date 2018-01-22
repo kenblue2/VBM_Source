@@ -14,6 +14,7 @@ const float GRAVITY = 490.f;
 // FAnimNode_VBM
 FAnimNode_VBM::FAnimNode_VBM()
 	: bIdleState(false)
+	, BallTime(-1.f)
 {
 }
 
@@ -44,6 +45,8 @@ void FAnimNode_VBM::Update_AnyThread(const FAnimationUpdateContext& Context)
 			AnimPlayers.RemoveAt(0);
 		}
 	}
+
+	BallTime += Context.GetDeltaTime();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -176,7 +179,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 					CreateNextHitInfo(NextPlayer, pVBMPawn, RequiredBones);
 				}
 
-				if (pVBMPawn->IsPlaying)
+				if (pVBMPawn->IsPlaying && pVBMPawn->pDestPawn->HitBallPos != FVector::ZeroVector)
 				{
 					AnimPlayers.Last().Stop();
 					AnimPlayers.Add(NextPlayer);
@@ -194,44 +197,69 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		}
 		else if (pVBMPawn->IsPlaying)
 		{
-			const FAnimPlayer& CurPlayer = AnimPlayers.Last();
+			//const FAnimPlayer& CurPlayer = AnimPlayers.Last();
 
-			float HitEndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.HitEndFrame);
+			//float HitEndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.HitEndFrame);
 
-			if (CurPlayer.Time > HitEndTime)
-			{
-				pVBMPawn->pDestPawn = NULL;
-			}
+			//if (CurPlayer.Time > HitEndTime)
+			//{
+			//	pVBMPawn->pDestPawn = NULL;
+			//}
 		}
 
-		if (pVBMPawn->pDestPawn)
+		if (PassTrajectory2.Num() > 0)
 		{
-			for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
-			{
-				const FVector& HitPos = NextHitPoss[IdxHit];
-				const FVector& HitVel = NextHitVels[IdxHit];
+			float BallEndTime = (float)PassTrajectory2.Num() * 0.033f;
+			float RemainedTime = BallEndTime - BallTime;
 
-				DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
-				DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
-			}
-
-			for (auto& BallTrajectory : BallTrajectories)
+			if (pVBMPawn->pDestPawn && pVBMPawn->pDestPawn->HitBallTime > 0.f)
 			{
-				for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
+				if (RemainedTime < pVBMPawn->pDestPawn->HitBallTime)
 				{
-					DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor(1, 1, 1, 0.5f));
+					pVBMPawn->pDestPawn->HitBallTime = RemainedTime;
+					pVBMPawn->pDestPawn = NULL;
 				}
 			}
 
-			for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
+			if (RemainedTime > 0.f)
 			{
-				DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor(1, 0, 0, 0.5f), false, -1.f, 0, 1.f);
-			}
+				for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor::Silver, false, -1.f, 0, 1.f);
+				}
 
-			for (int32 IdxPos = 1; IdxPos < PassTrajectory2.Num(); ++IdxPos)
-			{
-				DrawDebugLine(GWorld, PassTrajectory2[IdxPos - 1], PassTrajectory2[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
+				for (int32 IdxPos = 1; IdxPos < PassTrajectory2.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, PassTrajectory2[IdxPos - 1], PassTrajectory2[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
+				}
+
+				int32 BallFrame = FMath::RoundToInt(BallTime / 0.033f);
+
+				if (PassTrajectory2.IsValidIndex(BallFrame))
+				{
+					DrawDebugSphere(GWorld, PassTrajectory2[BallFrame], 10.f, 16, FColor::Orange);
+				}
 			}
+		}
+
+		if (pVBMPawn && pVBMPawn->pDestPawn)
+		{
+			//for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
+			//{
+			//	const FVector& HitPos = NextHitPoss[IdxHit];
+			//	const FVector& HitVel = NextHitVels[IdxHit];
+
+			//	DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
+			//	DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
+			//}
+
+			//for (auto& BallTrajectory : BallTrajectories)
+			//{
+			//	for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
+			//	{
+			//		DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Black);
+			//	}
+			//}
 
 			DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
 			DrawDebugSphere(GWorld, pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
@@ -285,7 +313,7 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 
 	FVector PassDir = (DestPos - PlayerPos).GetSafeNormal2D();
 
-	float MinAngle = FLT_MAX;
+	float MinCost = FLT_MAX;
 	FAnimPlayer MinPlayer;
 
 	// select motion clip
@@ -305,14 +333,49 @@ bool FAnimNode_VBM::CreateNextPlayer(FAnimPlayer& OutPlayer, const FBoneContaine
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, RequiredBones);
 			}
 
-			FVector ClipHitDir = CalcHitDir(pNextAnim, MotionClip, RequiredBones);
-			ClipHitDir = NextPlayer.Align.TransformVector(ClipHitDir);
+			//FVector ClipHitDir = CalcHitDir(pNextAnim, MotionClip, RequiredBones);
+			//ClipHitDir = NextPlayer.Align.TransformVector(ClipHitDir);
 
-			float Angle = FMath::Abs(FMath::Acos(PassDir | ClipHitDir));
-			if (Angle < MinAngle)
+			//TArray<FVector> Trajectory;
+			//{
+			//	FVector MaxHitVel = GetMaxHitVel(pNextAnim, MotionClip, RequiredBones);
+			//	MaxHitVel = NextPlayer.Align.TransformVector(MaxHitVel);
+
+			//	GenerateBallTrajectory(Trajectory, pPawn->PlayerPos, MaxHitVel);
+			//}
+
+			for (int32 Frame = MotionClip.HitBeginFrame; Frame < MotionClip.HitEndFrame; ++Frame)
 			{
-				MinAngle = Angle;
-				MinPlayer = NextPlayer;
+				float HitTime = pNextAnim->GetTimeAtFrame(Frame);
+
+				FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+				FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+				FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+
+				FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+				HitDir = NextPlayer.Align.TransformVector(HitDir);
+
+				TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
+				if (pMatchInfos != NULL)
+				{
+					float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+
+					FVector HitVel = HitDir * Speed;
+
+					TArray<FVector> Trajectory;
+					GenerateBallTrajectory(Trajectory, pPawn->PlayerPos, HitVel);
+
+					float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
+					float Angle = FMath::Abs(FMath::Acos(PassDir | HitVel));
+
+					float Cost = Angle * 10.f + Dist;
+
+					if (MinCost > Cost)
+					{
+						MinCost = Cost;
+						MinPlayer = NextPlayer;
+					}
+				}
 			}
 		}
 	}
@@ -433,6 +496,7 @@ void FAnimNode_VBM::CreateNextHitInfo(
 
 	BallTrajectories.Empty();
 
+	int32 MinTrajectoryIndex = -1;
 	float MinDist = FLT_MAX;
 
 	for (int32 IdxHit = 0; IdxHit < NextHitPoss.Num(); ++IdxHit)
@@ -440,7 +504,7 @@ void FAnimNode_VBM::CreateNextHitInfo(
 		TArray<FVector> Trajectory;
 		GenerateBallTrajectory(Trajectory, NextHitPoss[IdxHit], NextHitVels[IdxHit]);
 
-		float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size2D();
+		float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
 
 		if (Dist < MinDist)
 		{
@@ -448,9 +512,22 @@ void FAnimNode_VBM::CreateNextHitInfo(
 			pPawn->HitBallPos = NextHitPoss[IdxHit];
 			pPawn->HitBallVel = NextHitVels[IdxHit];
 			PassTrajectory = Trajectory;
+
+			float HitTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.HitBeginFrame + IdxHit);
+			float BeginTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.BeginFrame);
+
+			BallTime = BeginTime - HitTime;
+			pPawn->HitBallTime = HitTime - BeginTime;
+
+			MinTrajectoryIndex = IdxHit;
 		}
 
 		BallTrajectories.Add(Trajectory);
+	}
+
+	if (BallTrajectories.IsValidIndex(MinTrajectoryIndex))
+	{
+		BallTrajectories.RemoveAt(MinTrajectoryIndex);
 	}
 }
 
@@ -479,6 +556,36 @@ FVector FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, const FMotionClip& Clip,
 	}
 
 	return AvgHitDir.GetSafeNormal2D();
+}
+
+//-------------------------------------------------------------------------------------------------
+FVector FAnimNode_VBM::GetMaxHitVel(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones)
+{
+	FVector MaxHitVel = FVector::ZeroVector;
+
+	for (int32 Frame = Clip.HitBeginFrame; Frame < Clip.HitEndFrame; ++Frame)
+	{
+		float HitTime = pAnim->GetTimeAtFrame(Frame);
+
+		FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+		FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+
+		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+
+		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
+		if (pMatchInfos != NULL)
+		{
+			float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+
+			if (MaxHitVel.Size() < Speed)
+			{
+				MaxHitVel = HitDir * Speed;
+			}
+		}
+	}
+
+	return MaxHitVel;
 }
 
 //-------------------------------------------------------------------------------------------------
