@@ -207,18 +207,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			}
 		}
 
-		if (RemainedTime > 0.f)
-		{
-			for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
-			{
-				DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor::Silver, false, -1.f, 0, 1.f);
-			}
-
-			for (int32 IdxPos = 1; IdxPos < PassTrajectory2.Num(); ++IdxPos)
-			{
-				DrawDebugLine(GWorld, PassTrajectory2[IdxPos - 1], PassTrajectory2[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
-			}
-		}
+		
 
 		if (BallTime > 0.f)
 		{
@@ -236,28 +225,40 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			else if (iBallFrame > 0)
 			{
 				DrawDebugSphere(GWorld, PassTrajectory2.Last(), 15.f, 16, FColor::Orange);
-				//PassTrajectory2.Empty();
 			}
 		}
 
-		if (pVBMPawn->pDestPawn != NULL)
+		if (pVBMPawn->pDestPawn != NULL && ShowDebugInfo)
 		{
-			//for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
-			//{
-			//	const FVector& HitPos = NextHitPoss[IdxHit];
-			//	const FVector& HitVel = NextHitVels[IdxHit];
+			if (RemainedTime > 0.f)
+			{
+				for (int32 IdxPos = 1; IdxPos < PassTrajectory.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, PassTrajectory[IdxPos - 1], PassTrajectory[IdxPos], FColor::Silver, false, -1.f, 0, 1.f);
+				}
 
-			//	DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
-			//	DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
-			//}
+				for (int32 IdxPos = 1; IdxPos < PassTrajectory2.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, PassTrajectory2[IdxPos - 1], PassTrajectory2[IdxPos], FColor::Red, false, -1.f, 0, 1.f);
+				}
+			}
 
-			//for (auto& BallTrajectory : BallTrajectories)
-			//{
-			//	for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
-			//	{
-			//		DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Black);
-			//	}
-			//}
+			for (int32 IdxHit = 0; IdxHit < NextHitVels.Num(); ++IdxHit)
+			{
+				const FVector& HitPos = NextHitPoss[IdxHit];
+				const FVector& HitVel = NextHitVels[IdxHit];
+
+				DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
+				DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
+			}
+
+			for (auto& BallTrajectory : BallTrajectories)
+			{
+				for (int32 IdxPos = 1; IdxPos < BallTrajectory.Num(); ++IdxPos)
+				{
+					DrawDebugLine(GWorld, BallTrajectory[IdxPos - 1], BallTrajectory[IdxPos], FColor::Black);
+				}
+			}
 
 			DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
 			DrawDebugSphere(GWorld, pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);

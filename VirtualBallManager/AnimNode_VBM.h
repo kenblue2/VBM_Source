@@ -35,6 +35,9 @@ struct VIRTUALBALLMANAGER_API FAnimNode_VBM : public FAnimNode_Base
 	UPROPERTY(EditAnywhere, Category = Settings)
 	float LimitVel = 200.f;
 
+	UPROPERTY(EditAnywhere, Category = Settings)
+	bool ShowDebugInfo = false;
+
 public:
 
 	FAnimNode_VBM();
