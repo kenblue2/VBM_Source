@@ -19,9 +19,22 @@ AVirtualBallManagerGameModeBase::AVirtualBallManagerGameModeBase()
 }
 
 //-------------------------------------------------------------------------------------------------
-void AVirtualBallManagerGameModeBase::PostInitializeComponents()
+FVector AVirtualBallManagerGameModeBase::GetBallPos()
 {
-	Super::PostInitializeComponents();
+	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
+	{
+		AVBM_Pawn* pPawn = Cast<AVBM_Pawn>(PawnIt->Get());
+		if (pPawn == NULL)
+			continue;
+
+		FVector BallPos = pPawn->GetBallPos();
+		if (BallPos != FVector::ZeroVector)
+		{
+			return BallPos;
+		}
+	}
+
+	return FVector::ZeroVector;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -68,7 +81,6 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			pPrevPawn->pAnimNode->PassTrajectory2.Empty();
 		}
 	}
-
 
 /*
 	TArray<FVector> HitPosList;

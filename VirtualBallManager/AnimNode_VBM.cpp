@@ -161,8 +161,6 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		}
 	}
 
-	
-
 	if (AnimPlayers.Num() <= 0)
 	{
 		TArray<UAnimSequence*> pAnims;
@@ -193,7 +191,6 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			pVBMPawn->bHitBall = true;
 		}
 
-		float BallEndTime = (float)PassTrajectory2.Num() * 0.033f;
 		float RemainedTime = BallEndTime - BallTime;
 
 		if (pVBMPawn->pDestPawn != NULL)
@@ -203,11 +200,8 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				pVBMPawn->bBeginNextMotion = true;
 
 				pVBMPawn->pDestPawn->TimeError = pVBMPawn->pDestPawn->HitBallTime - RemainedTime;
-				//pVBMPawn->pDestPawn = NULL;
 			}
 		}
-
-		
 
 		if (BallTime > 0.f)
 		{
@@ -218,14 +212,14 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			if (PassTrajectory2.IsValidIndex(iBallFrame) &&
 				PassTrajectory2.IsValidIndex(iBallFrame + 1))
 			{
-				FVector BallPos = FMath::Lerp(PassTrajectory2[iBallFrame], PassTrajectory2[iBallFrame + 1], Ratio);
-
-				DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
+				BallPos = FMath::Lerp(PassTrajectory2[iBallFrame], PassTrajectory2[iBallFrame + 1], Ratio);
 			}
 			else if (iBallFrame > 0)
 			{
-				DrawDebugSphere(GWorld, PassTrajectory2.Last(), 15.f, 16, FColor::Orange);
+				BallPos = PassTrajectory2.Last();
 			}
+
+			//DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
 		}
 
 		if (pVBMPawn->pDestPawn != NULL && ShowDebugInfo)
@@ -377,16 +371,18 @@ void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn, float DiffTime)
 {
 	bIdleState = false;
 
-	DiffTime += 0.033f;
+	//DiffTime += 0.033f;
 
 	NextAnimPlayer.Time += DiffTime;
-	BallTime = BeginBallTime + DiffTime;
+	BallTime = BallBeginTime + DiffTime;
 
 	AnimPlayers.Last().Stop();
 	AnimPlayers.Add(NextAnimPlayer);
 
 	GenerateBallTrajectory(PassTrajectory2, pPawn->HitBallPos, pPawn->HitBallVel);
 	AdjustBallTrajectory(PassTrajectory2, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
+
+	BallEndTime = float(PassTrajectory2.Num() - 1) * 0.033f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -604,7 +600,7 @@ void FAnimNode_VBM::CreateNextHitInfo(
 			float BeginTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.BeginFrame);
 
 			//BallTime = BeginTime - HitTime;
-			BeginBallTime = BeginTime - HitTime;
+			BallBeginTime = BeginTime - HitTime;
 			pPawn->HitBallTime = HitTime - BeginTime;
 
 			MinTrajectoryIndex = IdxHit;

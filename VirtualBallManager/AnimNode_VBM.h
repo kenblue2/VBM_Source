@@ -143,7 +143,9 @@ public:
 
 	float BallTime;
 	float BallEndTime;
-	float BeginBallTime;
+	float BallBeginTime;
+
+	FVector BallPos;
 
 	TArray<FVector> PassTrajectory;
 	TArray<FVector> PassTrajectory2;

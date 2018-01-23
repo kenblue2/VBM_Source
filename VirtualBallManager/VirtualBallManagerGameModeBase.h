@@ -24,8 +24,8 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 	 */
 	virtual void Tick( float DeltaSeconds ) override;
 
-	// Allow actors to initialize themselves on the C++ side
-	virtual void PostInitializeComponents() override;
+	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
+	FVector GetBallPos();
 
 public:
 

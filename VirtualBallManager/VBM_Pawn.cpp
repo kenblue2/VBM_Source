@@ -10,6 +10,7 @@ AVBM_Pawn::AVBM_Pawn()
 	: pDestPawn(NULL)
 	, pAnimNode(NULL)
 	, bHitBall(false)
+	, bHaveBall(false)
 	, bBeginNextMotion(false)
 	, HitBallTime(0.f)
 	, PlayerPos(FVector::ZeroVector)
@@ -73,4 +74,15 @@ void AVBM_Pawn::PlayHitMotion()
 		bBeginNextMotion = false;
 		pAnimNode->PlayHitMotion(this, TimeError);
 	}
+}
+
+//-------------------------------------------------------------------------------------------------
+FVector AVBM_Pawn::GetBallPos()
+{
+	if (bHitBall && pAnimNode != NULL && pAnimNode->PassTrajectory2.Num() > 0)
+	{
+		return pAnimNode->BallPos;
+	}
+
+	return FVector::ZeroVector;
 }

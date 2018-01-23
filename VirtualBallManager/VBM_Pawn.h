@@ -30,9 +30,12 @@ public:
 
 	void PlayHitMotion();
 
+	FVector GetBallPos();
+
 public:
 
 	bool bHitBall;
+	bool bHaveBall;
 	bool bBeginNextMotion;
 
 	AVBM_Pawn* pDestPawn;
