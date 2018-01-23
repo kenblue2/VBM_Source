@@ -27,38 +27,8 @@ void AVirtualBallManagerGameModeBase::PostInitializeComponents()
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
-	if (PassOrders.Num() == 0)
-		return;
-
-	//for (int32 IdxOrder = 1; IdxOrder < PassOrders.Num(); ++IdxOrder)
-	//{
-	//	FVector BeginPos = PassOrders[IdxOrder - 1]->PlayerPos;
-	//	FVector EndPos = PassOrders[IdxOrder]->PlayerPos;
-
-	//	BeginPos.Z = 1.f;
-	//	EndPos.Z = 1.f;
-
-	//	DrawDebugLine(GetWorld(), BeginPos, EndPos, FColor::Yellow, false, -1.0f, 0, 1.f);
-	//}
-
-	//for (auto& PassOrder : PassOrders)
-	//{
-	//	DrawDebugSphere(GetWorld(), PassOrder->PlayerPos, 10.f, 32, FColor::Red);
-	//}
-
 	if (PassOrders.Num() < 3)
 		return;
-
-	//if (BallTrajectory.Num() == 0)
-	//{
-	//	const FVector& BeginPos = PassOrders[0]->HitPos;
-	//	const FVector& EndPos = PassOrders[1]->HitPos;
-
-	//	if (BeginPos != EndPos)
-	//	{
-	//		CalcBallTrajectory(BeginPos, EndPos, 1);
-	//	}
-	//}
 
 	if (PassOrders[0]->pDestPawn == NULL)
 	{
@@ -71,17 +41,27 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[1]->pDestPawn = PassOrders[2];
 		PassOrders[1]->CreateNextPlayer();
 
+		PassOrders[0]->TimeError += DeltaSeconds;
 		PassOrders[0]->PlayHitMotion();
 	}
-	
+
 	if (PassOrders[0]->bBeginNextMotion)
 	{
 		pPrevPawn = PassOrders[0];
 		PassOrders[0]->pDestPawn = NULL;
 		PassOrders.RemoveAt(0);
+
+		if (PassOrders.Num() >= 3)
+		{
+			PassOrders[1]->pDestPawn = PassOrders[2];
+			PassOrders[1]->CreateNextPlayer();
+
+			PassOrders[0]->TimeError += DeltaSeconds;
+			PassOrders[0]->PlayHitMotion();
+		}
 	}
 
-	if (PassOrders[0]->bHitBall)
+	if (PassOrders.Num() >= 3 && PassOrders[0]->bHitBall)
 	{
 		if (pPrevPawn != NULL && pPrevPawn->pAnimNode != NULL)
 		{
@@ -89,7 +69,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		}
 	}
 
-	
+
 /*
 	TArray<FVector> HitPosList;
 

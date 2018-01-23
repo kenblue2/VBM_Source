@@ -44,4 +44,6 @@ public:
 	float HitBallTime;
 
 	struct FAnimNode_VBM* pAnimNode;
+
+	float TimeError;
 };

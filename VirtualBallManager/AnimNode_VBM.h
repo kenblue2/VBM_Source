@@ -57,9 +57,9 @@ public:
 	/** Override this to perform game-thread work prior to non-game thread Update() being called */
 	virtual void PreUpdate(const UAnimInstance* InAnimInstance);
 
-	void CreateNextPlayer(class AVBM_Pawn* pPawn);
+	void CreateNextPlayer(class AVBM_Pawn* pPawn, float DiffTime);
 
-	void PlayHitMotion(class AVBM_Pawn* pPawn);
+	void PlayHitMotion(class AVBM_Pawn* pPawn, float DiffTime);
 
 protected:
 
@@ -129,9 +129,6 @@ protected:
 
 	FHitSection SelectedHitSec;
 
-	float BallTime;
-	float BallEndTime;
-
 	FAnimPlayer NextAnimPlayer;
 
 	FBoneContainer BoneContainer;
@@ -140,6 +137,10 @@ public:
 
 	bool bHitBall;
 	bool bIdleState;
+
+	float BallTime;
+	float BallEndTime;
+	float BeginBallTime;
 
 	TArray<FVector> PassTrajectory;
 	TArray<FVector> PassTrajectory2;

@@ -15,6 +15,7 @@ AVBM_Pawn::AVBM_Pawn()
 	, PlayerPos(FVector::ZeroVector)
 	, HitBallPos(FVector::ZeroVector)
 	, HitBallVel(FVector::ZeroVector)
+	, TimeError(0.f)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -59,8 +60,7 @@ void AVBM_Pawn::CreateNextPlayer()
 {
 	if (pAnimNode != NULL)
 	{
-		bHitBall = false;
-		pAnimNode->CreateNextPlayer(this);
+		pAnimNode->CreateNextPlayer(this, TimeError);
 	}
 }
 
@@ -69,7 +69,8 @@ void AVBM_Pawn::PlayHitMotion()
 {
 	if (pAnimNode != NULL)
 	{
+		bHitBall = false;
 		bBeginNextMotion = false;
-		pAnimNode->PlayHitMotion(this);
+		pAnimNode->PlayHitMotion(this, TimeError);
 	}
 }
