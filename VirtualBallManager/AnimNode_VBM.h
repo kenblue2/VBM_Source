@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AnimNodes/PoseMatchInfo.h"
+#include "PoseMatchInfo.h"
 #include "Animation/AnimNodeBase.h"
 #include "AnimNode_VBM.generated.h"
 

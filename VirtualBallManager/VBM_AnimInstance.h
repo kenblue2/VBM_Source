@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PoseMatchInfo.h"
 #include "Animation/AnimInstance.h"
-#include "AnimNodes/PoseMatchInfo.h"
 #include "VBM_AnimInstance.generated.h"
 
 /**
