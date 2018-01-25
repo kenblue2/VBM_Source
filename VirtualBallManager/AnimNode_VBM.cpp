@@ -4,6 +4,8 @@
 #include "Animation/AnimInstanceProxy.h"
 #include "VBM_Pawn.h"
 #include "DrawDebugHelpers.h"
+#include "Engine/SkeletalMeshSocket.h"
+
 
 #pragma optimize("", off)
 
@@ -224,7 +226,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				BallPos = PassTrajectory2.Last();
 			}
 
-			DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
+			//DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
 		}
 
 		if (ShowDebugInfo)
@@ -338,7 +340,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime)
 				FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
 				FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Knee_Joint_01"), BoneContainer);
 				FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
-
+				
 				FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
 				HitDir = NextPlayer.Align.TransformVector(HitDir);
 
@@ -379,18 +381,21 @@ void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn, float DiffTime)
 {
 	bIdleState = false;
 
-	//DiffTime += 0.033f;
-
 	NextAnimPlayer.Time += DiffTime;
 	BallTime = BallBeginTime + DiffTime;
 
 	AnimPlayers.Last().Stop();
 	AnimPlayers.Add(NextAnimPlayer);
 
-	GenerateBallTrajectory(PassTrajectory2, pPawn->HitBallPos, pPawn->HitBallVel);
+	GenerateBallTrajectory(PassTrajectory2, pPawn->HitBallPos, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
 	AdjustBallTrajectory(PassTrajectory2, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
 
 	BallEndTime = float(PassTrajectory2.Num() - 1) * 0.033f;
+
+	FVector BallMoveDir = (pPawn->pDestPawn->HitBallPos - pPawn->HitBallPos).GetSafeNormal();
+	FVector BallRotAxis = (FVector::UpVector ^ BallMoveDir).GetSafeNormal();
+
+	pPawn->HitAxisAng = BallRotAxis * pPawn->HitBallVel.Size() * RotRatio;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -585,6 +590,11 @@ void FAnimNode_VBM::CreateNextHitInfo(
 		HitPos = NextPlayer.Align.TransformPosition(HitPos) + pPawn->GetActorLocation();
 	}
 
+	for (FVector& AxisAng : NextAxisAngs)
+	{
+		AxisAng = NextPlayer.Align.TransformVector(AxisAng);
+	}
+
 	BallTrajectories.Empty();
 
 	int32 MinTrajectoryIndex = -1;
@@ -602,6 +612,7 @@ void FAnimNode_VBM::CreateNextHitInfo(
 			MinDist = Dist;
 			pPawn->HitBallPos = NextHitPoss[IdxHit];
 			pPawn->HitBallVel = NextHitVels[IdxHit];
+			pPawn->HitAxisAng = NextAxisAngs[IdxHit];
 			PassTrajectory = Trajectory;
 
 			float HitTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.HitBeginFrame + IdxHit);
@@ -685,6 +696,7 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 {
 	NextHitVels.Empty();
 	NextHitPoss.Empty();
+	NextAxisAngs.Empty();
 
 	for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
 	{
@@ -695,6 +707,14 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
 
 		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+		FVector RotAxis = ((KneePos - AnklePos) ^ HitDir).GetSafeNormal();
+
+		USkeletalMeshSocket* pHitSocket = pAnim->GetSkeleton()->FindSocket("Right_Hit_Socket");
+		if (pHitSocket != NULL)
+		{
+			FTransform ToeTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
+			ToePos = (pHitSocket->GetSocketLocalTransform() * ToeTrans).GetTranslation();
+		}
 
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
 		if (pMatchInfos != NULL)
@@ -703,6 +723,7 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 
 			NextHitVels.Add(HitDir * Speed);
 			NextHitPoss.Add(ToePos);
+			NextAxisAngs.Add(RotAxis * Speed * RotRatio);
 		}
 	}
 }
@@ -781,13 +802,15 @@ void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVec
 			}
 		}
 
-		if (MinDist < 0.02f)
+		if (MinDist < Threshold)
 		{
 			Trajectory.SetNum(MinIndex + 1);
 			break;
 		}
-	
-		NewBeginVel += MinDir * 0.01f;
+
+		FVector DeltaDir = MinDir * 0.01f;
+
+		NewBeginVel += DeltaDir;
 
 		GenerateBallTrajectory(Trajectory, Trajectory[0], NewBeginVel, EndPos);
 	}
@@ -802,21 +825,27 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 	float Pz0 = BeginPos.Z;
 	float Vz0 = BeginVel.Z;
 	//float Pz1 = Pz0;
-	float Pz1 = 0.f;
+	float Pz1 = BallRadius;
 
-	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * Pz0)) / GRAVITY;
+	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * (Pz0 - BallRadius))) / GRAVITY;
 
-	float Vz1 = GRAVITY * t1 - Vz0;
+	float Vz1 = (GRAVITY * t1 - Vz0) * BallElasicity;
 
-	float t2 = (Vz1 + FMath::Sqrt(Vz1 * Vz1 - 2.f * GRAVITY * Pz1)) / GRAVITY;
+	float t2 = (Vz1 + FMath::Sqrt(Vz1 * Vz1 - 2.f * GRAVITY * (Pz1 - BallRadius))) / GRAVITY;
 
 	FVector BallPos;
 	TArray<FVector> BallPoss;
 
+	float Vx = AlignedHorVel.X;
+	float Vy = AlignedHorVel.Y;
+
 	for (float Time = 0.f; Time < t1 + t2; Time += 0.033f)
 	{
-		BallPos.X = BeginPos.X + AlignedHorVel.X * Time;
-		BallPos.Y = BeginPos.Y + AlignedHorVel.Y * Time;
+		Vx = AlignedHorVel.X - Vx * AirReistance * Time;
+		Vy = AlignedHorVel.Y - Vy * AirReistance * Time;
+
+		BallPos.X = BeginPos.X + Vx * Time;
+		BallPos.Y = BeginPos.Y + Vy * Time;
 
 		if (Time < t1)
 		{
@@ -826,7 +855,7 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 		{
 			float dt = Time - t1;
 
-			BallPos.Z = (Vz1 - 0.5f * GRAVITY * dt) * dt;
+			BallPos.Z = BallRadius + (Vz1 - 0.5f * GRAVITY * dt) * dt;
 		}
 
 		BallPoss.Add(BallPos);
@@ -950,8 +979,27 @@ void FAnimNode_VBM::DrawAnimPoses(UAnimSequence* pAnimSeq, const FBoneContainer&
 }
 
 //-------------------------------------------------------------------------------------------------
-FVector FAnimNode_VBM::CalcBoneCSLocation(
-	const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont)
+FTransform FAnimNode_VBM::CalcBoneCSTransform(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont)
+{
+	FBlendedCurve EmptyCurve;
+
+	FCompactPose AnimPose;
+	AnimPose.SetBoneContainer(&BoneCont);
+
+	pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime));
+
+	FCSPose<FCompactPose> CSPose;
+	CSPose.InitPose(AnimPose);
+
+	const FReferenceSkeleton& RefSkel = pAnimSeq->GetSkeleton()->GetReferenceSkeleton();
+
+	int32 BoneIndex = RefSkel.FindBoneIndex(BoneName);
+
+	return CSPose.GetComponentSpaceTransform(FCompactPoseBoneIndex(BoneIndex));
+}
+
+//-------------------------------------------------------------------------------------------------
+FVector FAnimNode_VBM::CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont)
 {
 	FBlendedCurve EmptyCurve;
 

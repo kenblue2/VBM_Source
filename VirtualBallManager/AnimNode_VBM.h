@@ -38,6 +38,21 @@ struct VIRTUALBALLMANAGER_API FAnimNode_VBM : public FAnimNode_Base
 	UPROPERTY(EditAnywhere, Category = Settings)
 	bool ShowDebugInfo = false;
 
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float AirReistance = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float BallElasicity = 0.8f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float Threshold = 0.05f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float RotRatio = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float BallRadius = 17.f;
+
 public:
 
 	FAnimNode_VBM();
@@ -98,6 +113,7 @@ protected:
 	FVector CalcHitDir(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones);
 
 	FVector CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont);
+	FTransform CalcBoneCSTransform(const UAnimSequence* pAnimSeq, float AnimTime, const FName& BoneName, const FBoneContainer& BoneCont);
 
 	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVe);
 	void GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginPos, const FVector& BeginVel, const FVector& EndPos);
@@ -127,6 +143,7 @@ protected:
 
 	TArray<FVector> NextHitVels;
 	TArray<FVector> NextHitPoss;
+	TArray<FVector> NextAxisAngs;
 
 	TArray<TArray<FVector>> BallTrajectories;
 

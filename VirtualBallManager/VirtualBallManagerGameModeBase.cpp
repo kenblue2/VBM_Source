@@ -35,6 +35,22 @@ FVector AVirtualBallManagerGameModeBase::GetBallPos()
 }
 
 //-------------------------------------------------------------------------------------------------
+FRotator AVirtualBallManagerGameModeBase::GetBallRot(float DeltaTime)
+{
+	FVector AxisAng = FVector::ZeroVector;
+
+	for (auto& BallCtrl : BallCtrls)
+	{
+		if (BallCtrl.BallTime > 0.f)
+		{
+			AxisAng = BallCtrl.BallAxisAng;
+		}
+	}
+
+	return FQuat(AxisAng.GetSafeNormal(), AxisAng.Size() * DeltaTime).Rotator();
+}
+
+//-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
 	for (auto& BallCtrl : BallCtrls)
@@ -46,6 +62,19 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	{
 		BallCtrls.RemoveAt(0);
 	}
+
+	//for (auto& BallCtrl : BallCtrls)
+	//{
+	//	if (BallCtrl.BallTrajectory.Num() == 0 ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+	//		continue;
+
+	//	for (const FVector& BallPos : BallCtrl.BallTrajectory)
+	//	{
+	//		DrawDebugSphere(GetWorld(), BallPos, 15.f, 8, FColor::Black);
+	//	}
+	//}
 
 	if (PassOrders.Num() < 3)
 		return;
@@ -67,6 +96,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 
 		FBallController BallCtrl;
 		{
+			BallCtrl.BallAxisAng = PassOrders[0]->HitAxisAng;
 			BallCtrl.BallTime = PassOrders[0]->pAnimNode->BallTime;
 			BallCtrl.BallTrajectory = PassOrders[0]->pAnimNode->PassTrajectory2;
 		}

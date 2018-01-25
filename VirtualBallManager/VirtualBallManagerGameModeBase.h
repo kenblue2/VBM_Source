@@ -41,6 +41,8 @@ public:
 
 	float BallTime;
 
+	FVector BallAxisAng;
+
 	TArray<FVector> BallTrajectory;
 };
 
@@ -66,14 +68,13 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
 	FVector GetBallPos();
 
-public:
+	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
+	FRotator GetBallRot(float DeltaTime);
 
-	FVector BallPos;
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	TArray<class AVBM_Pawn*> PassOrders;
-
-	TArray<FVector> BallTrajectory;
 
 	class AVBM_Pawn* pPrevPawn;
 

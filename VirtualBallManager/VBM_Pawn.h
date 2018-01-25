@@ -44,6 +44,7 @@ public:
 	FVector PlayerPos;
 	FVector HitBallPos;
 	FVector HitBallVel;
+	FVector HitAxisAng;
 
 	float HitBallTime;
 

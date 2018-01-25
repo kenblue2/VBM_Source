@@ -17,6 +17,7 @@ AVBM_Pawn::AVBM_Pawn()
 	, PlayerPos(FVector::ZeroVector)
 	, HitBallPos(FVector::ZeroVector)
 	, HitBallVel(FVector::ZeroVector)
+	, HitAxisAng(FVector::ZeroVector)
 	, TimeError(0.f)
 {
  	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
