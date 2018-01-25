@@ -39,6 +39,7 @@ public:
 	bool bBeginNextMotion;
 
 	AVBM_Pawn* pDestPawn;
+	AVBM_Pawn* pPrevPawn;
 
 	FVector PlayerPos;
 	FVector HitBallPos;

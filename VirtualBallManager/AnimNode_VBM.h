@@ -138,7 +138,7 @@ protected:
 
 public:
 
-	bool bHitBall;
+	bool bMoveBall;
 	bool bIdleState;
 
 	float BallTime;

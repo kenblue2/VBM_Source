@@ -21,25 +21,32 @@ AVirtualBallManagerGameModeBase::AVirtualBallManagerGameModeBase()
 //-------------------------------------------------------------------------------------------------
 FVector AVirtualBallManagerGameModeBase::GetBallPos()
 {
-	for (auto PawnIt = GWorld->GetPawnIterator(); PawnIt; ++PawnIt)
-	{
-		AVBM_Pawn* pPawn = Cast<AVBM_Pawn>(PawnIt->Get());
-		if (pPawn == NULL)
-			continue;
+	FVector BallPos = FVector::ZeroVector;
 
-		FVector BallPos = pPawn->GetBallPos();
-		if (BallPos != FVector::ZeroVector)
+	for (auto& BallCtrl : BallCtrls)
+	{
+		if (BallCtrl.BallTime > 0.f)
 		{
-			return BallPos;
+			BallPos = BallCtrl.GetBallPos();
 		}
 	}
 
-	return FVector::ZeroVector;
+	return BallPos;
 }
 
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
+	for (auto& BallCtrl : BallCtrls)
+	{
+		BallCtrl.Update(DeltaSeconds);
+	}
+
+	if (BallCtrls.Num() >= 2 && BallCtrls.Last().BallTime > 0.f)
+	{
+		BallCtrls.RemoveAt(0);
+	}
+
 	if (PassOrders.Num() < 3)
 		return;
 
@@ -51,35 +58,25 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 
 	if (PassOrders[1]->pDestPawn == NULL)
 	{
+		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
 		PassOrders[1]->CreateNextPlayer();
 
 		PassOrders[0]->TimeError += DeltaSeconds;
 		PassOrders[0]->PlayHitMotion();
+
+		FBallController BallCtrl;
+		{
+			BallCtrl.BallTime = PassOrders[0]->pAnimNode->BallTime;
+			BallCtrl.BallTrajectory = PassOrders[0]->pAnimNode->PassTrajectory2;
+		}
+		BallCtrls.Add(BallCtrl);
 	}
 
 	if (PassOrders[0]->bBeginNextMotion)
 	{
-		pPrevPawn = PassOrders[0];
 		PassOrders[0]->pDestPawn = NULL;
 		PassOrders.RemoveAt(0);
-
-		if (PassOrders.Num() >= 3)
-		{
-			PassOrders[1]->pDestPawn = PassOrders[2];
-			PassOrders[1]->CreateNextPlayer();
-
-			PassOrders[0]->TimeError += DeltaSeconds;
-			PassOrders[0]->PlayHitMotion();
-		}
-	}
-
-	if (PassOrders.Num() >= 3 && PassOrders[0]->bHitBall)
-	{
-		if (pPrevPawn != NULL && pPrevPawn->pAnimNode != NULL)
-		{
-			pPrevPawn->pAnimNode->PassTrajectory2.Empty();
-		}
 	}
 }
 

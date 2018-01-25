@@ -9,6 +9,7 @@
 AVBM_Pawn::AVBM_Pawn()
 	: pDestPawn(NULL)
 	, pAnimNode(NULL)
+	, pPrevPawn(NULL)
 	, bHitBall(false)
 	, bHaveBall(false)
 	, bBeginNextMotion(false)
@@ -45,7 +46,7 @@ void AVBM_Pawn::Tick(float DeltaTime)
 		return;
 
 	PlayerPos = pSkelComp->GetBoneLocation(FName("Root"));
-	PlayerPos.Z = 1.f;
+	PlayerPos.Z = 2.f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -79,7 +80,7 @@ void AVBM_Pawn::PlayHitMotion()
 //-------------------------------------------------------------------------------------------------
 FVector AVBM_Pawn::GetBallPos()
 {
-	if (bHitBall && pAnimNode != NULL && pAnimNode->PassTrajectory2.Num() > 0)
+	if (pAnimNode != NULL && pAnimNode->bMoveBall)
 	{
 		return pAnimNode->BallPos;
 	}

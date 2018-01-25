@@ -6,6 +6,45 @@
 #include "GameFramework/GameModeBase.h"
 #include "VirtualBallManagerGameModeBase.generated.h"
 
+
+struct FBallController
+{
+	FBallController() : BallTime(0.f) {}
+
+	void Update(float DeltaTime)
+	{
+		BallTime += DeltaTime;
+	}
+
+	FVector GetBallPos()
+	{
+		if (BallTrajectory.Num() == 0)
+			return FVector::ZeroVector;
+
+		if (BallTime < 0.f)
+			return BallTrajectory[0];
+
+		float fBallFrame = BallTime / 0.033f;
+		int32 iBallFrame = (int32)fBallFrame;
+		float Ratio = fBallFrame - iBallFrame;
+
+		if (BallTrajectory.IsValidIndex(iBallFrame) &&
+			BallTrajectory.IsValidIndex(iBallFrame + 1))
+		{
+			return FMath::Lerp(BallTrajectory[iBallFrame], BallTrajectory[iBallFrame + 1], Ratio);
+		}
+
+		return BallTrajectory.Last();
+	}
+
+public:
+
+	float BallTime;
+
+	TArray<FVector> BallTrajectory;
+};
+
+
 /**
  * 
  */
@@ -37,4 +76,6 @@ public:
 	TArray<FVector> BallTrajectory;
 
 	class AVBM_Pawn* pPrevPawn;
+
+	TArray<FBallController> BallCtrls;
 };

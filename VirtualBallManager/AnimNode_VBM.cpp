@@ -7,14 +7,14 @@
 
 #pragma optimize("", off)
 
-const float GRAVITY = 490.f;
+const float GRAVITY = 980.f;
 
 
 //-------------------------------------------------------------------------------------------------
 // FAnimNode_VBM
 FAnimNode_VBM::FAnimNode_VBM()
 	: BallTime(-1.f)
-	, bHitBall(false)
+	, bMoveBall(false)
 	, bIdleState(false)
 {
 }
@@ -186,10 +186,15 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	}
 	else if (PassTrajectory2.Num() > 0)
 	{
-		if (BallTime > 0.f)
-		{
-			pVBMPawn->bHitBall = true;
-		}
+		//if (bMoveBall == true && BallTime > BallEndTime)
+		//{
+		//	bMoveBall = false;
+		//}
+		//
+		//if (bMoveBall == false && BallTime > 0.f)
+		//{
+		//	bMoveBall = true;
+		//}
 
 		float RemainedTime = BallEndTime - BallTime;
 
@@ -219,10 +224,10 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				BallPos = PassTrajectory2.Last();
 			}
 
-			//DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
+			DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
 		}
 
-		if (pVBMPawn->pDestPawn != NULL && ShowDebugInfo)
+		if (ShowDebugInfo)
 		{
 			if (RemainedTime > 0.f)
 			{
@@ -254,10 +259,13 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				}
 			}
 
-			DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
-			DrawDebugSphere(GWorld, pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
+			if (pVBMPawn->pDestPawn)
+			{
+				DrawDebugLine(GWorld, pVBMPawn->PlayerPos, pVBMPawn->pDestPawn->PlayerPos, FColor::Yellow, false, -1.f, 0, 1.f);
+				DrawDebugSphere(GWorld, pVBMPawn->pDestPawn->PlayerPos, 10.f, 16, FColor::Green);
 
-			DrawDebugSphere(GWorld, pVBMPawn->HitBallPos, 3.f, 8, FColor::Red);
+				DrawDebugSphere(GWorld, pVBMPawn->HitBallPos, 3.f, 8, FColor::Red);
+			}
 		}
 	}
 
