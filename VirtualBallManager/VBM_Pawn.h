@@ -6,6 +6,8 @@
 #include "GameFramework/Pawn.h"
 #include "VBM_Pawn.generated.h"
 
+struct FPoseMatchInfo;
+
 UCLASS()
 class VIRTUALBALLMANAGER_API AVBM_Pawn : public APawn
 {
@@ -26,7 +28,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	void CreateNextPlayer();
+	void CreateNextPlayer(const FPoseMatchInfo& UserPose);
 
 	void PlayHitMotion();
 

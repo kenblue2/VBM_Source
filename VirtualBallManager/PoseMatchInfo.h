@@ -27,9 +27,24 @@ struct FPoseMatchInfo
 	float AlignedDegree;
 
 	//---------------------------------------------------------------------------------------------
-	FVector CalcOriginalVel(const FVector& Vel)
+	FVector CalcOriginalVel(const FVector& Vel) const
 	{
 		return FRotator(0, AlignedDegree, 0).RotateVector(Vel);
+	}
+
+	//---------------------------------------------------------------------------------------------
+	float ClacDiff(const FPoseMatchInfo& Other) const
+	{
+		return
+			(RootVel - Other.RootVel).Size() +
+			(LeftFootVel - Other.LeftFootVel).Size() +
+			(RightFootVel - Other.RightFootVel).Size() +
+			(LeftHandVel - Other.LeftHandVel).Size() +
+			(RightHandVel - Other.RightHandVel).Size() +
+			(LeftFootPos - Other.LeftFootPos).Size() +
+			(LeftFootPos - Other.LeftFootPos).Size() +
+			(RightFootPos - Other.RightFootPos).Size() +
+			(RightHandPos - Other.RightHandPos).Size();
 	}
 };
 

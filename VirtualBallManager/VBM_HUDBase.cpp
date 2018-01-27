@@ -2,6 +2,7 @@
 
 #include "VBM_HUDBase.h"
 #include "Animation/AnimInstance.h"
+#include "VirtualBallManagerGameModeBase.h"
 
 
 #pragma optimize("", off)
@@ -37,6 +38,10 @@ void AVBM_HUDBase::DrawHUD()
 			DrawRect(FLinearColor::Red, X - 3, Y - 3, 7, 7);
 		}
 	}
+
+	//AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
+	//if (pGameMode == NULL)
+	//	return;
 }
 
 //-------------------------------------------------------------------------------------------------

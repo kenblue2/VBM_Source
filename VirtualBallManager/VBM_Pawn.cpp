@@ -61,11 +61,11 @@ void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 }
 
 //-------------------------------------------------------------------------------------------------
-void AVBM_Pawn::CreateNextPlayer()
+void AVBM_Pawn::CreateNextPlayer(const FPoseMatchInfo& UserPose)
 {
 	if (pAnimNode != NULL)
 	{
-		pAnimNode->CreateNextPlayer(this, TimeError);
+		pAnimNode->CreateNextPlayer(this, TimeError, UserPose);
 	}
 }
 

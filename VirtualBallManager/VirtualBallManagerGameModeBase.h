@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "PoseMatchInfo.h"
 #include "VirtualBallManagerGameModeBase.generated.h"
 
 
@@ -79,10 +80,25 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 
 public:
 
+	void GeneratePoseMatchInfo(
+		FPoseMatchInfo& OutInfo,
+		const TArray<FVector>& CSPosList,
+		const TArray<FVector> CSVelList);
+
+	void SelectPoseMatchByUser(int32 BoneIndex);
+
+public:
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	TArray<class AVBM_Pawn*> PassOrders;
+
+	TArray<FPoseMatchInfo> PassPoses;
 
 	class AVBM_Pawn* pPrevPawn;
 
 	TArray<FBallController> BallCtrls;
+
+	TArray<FVector> HitBonePosList;
+
+	float LimitSpeed;
 };

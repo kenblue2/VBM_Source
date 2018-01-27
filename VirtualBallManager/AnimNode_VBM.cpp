@@ -188,16 +188,6 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	}
 	else if (PassTrajectory2.Num() > 0)
 	{
-		//if (bMoveBall == true && BallTime > BallEndTime)
-		//{
-		//	bMoveBall = false;
-		//}
-		//
-		//if (bMoveBall == false && BallTime > 0.f)
-		//{
-		//	bMoveBall = true;
-		//}
-
 		float RemainedTime = BallEndTime - BallTime;
 
 		if (pVBMPawn->pDestPawn != NULL)
@@ -306,7 +296,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime)
+void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPoseMatchInfo& UserPose)
 {
 	FVector PlayerPos = pPawn->PlayerPos;
 	FVector DestPos = pPawn->pDestPawn->PlayerPos;
@@ -347,7 +337,9 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime)
 				TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
 				if (pMatchInfos != NULL)
 				{
-					float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+					const FPoseMatchInfo& CurMatchPose = (*pMatchInfos)[Frame - 1];
+
+					float Speed = CurMatchPose.RightFootVel.Size();
 
 					FVector HitVel = HitDir * Speed;
 
@@ -355,9 +347,10 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime)
 					GenerateBallTrajectory(Trajectory, pPawn->PlayerPos, HitVel);
 
 					float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
-					float Angle = FMath::Abs(FMath::Acos(PassDir | HitVel));
+					float Angle = FMath::Acos(PassDir | HitVel);
+					float DiffPose = CurMatchPose.ClacDiff(UserPose);
 
-					float Cost = Angle * 10.f + Dist;
+					float Cost = DiffPose + Angle * 10.f + Dist;
 
 					if (MinCost > Cost)
 					{
@@ -372,8 +365,6 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime)
 	NextAnimPlayer = MinPlayer;
 
 	CreateNextHitInfo(NextAnimPlayer, pPawn, BoneContainer);
-
-	//PassTrajectory2.Empty();
 }
 
 //-------------------------------------------------------------------------------------------------

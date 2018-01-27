@@ -75,7 +75,7 @@ public:
 	/** Override this to perform game-thread work prior to non-game thread Update() being called */
 	virtual void PreUpdate(const UAnimInstance* InAnimInstance);
 
-	void CreateNextPlayer(class AVBM_Pawn* pPawn, float DiffTime);
+	void CreateNextPlayer(class AVBM_Pawn* pPawn, float DiffTime, const FPoseMatchInfo& UserPose);
 
 	void PlayHitMotion(class AVBM_Pawn* pPawn, float DiffTime);
 
