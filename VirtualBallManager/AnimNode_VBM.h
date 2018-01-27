@@ -45,7 +45,7 @@ struct VIRTUALBALLMANAGER_API FAnimNode_VBM : public FAnimNode_Base
 	float BallElasicity = 0.8f;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
-	float Threshold = 0.05f;
+	float Threshold = 1.f;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
 	float RotRatio = 0.5f;

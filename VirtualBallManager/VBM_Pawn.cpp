@@ -4,6 +4,9 @@
 #include "AnimNode_VBM.h"
 
 
+#pragma optimize("", off)
+
+
 //-------------------------------------------------------------------------------------------------
 // Sets default values
 AVBM_Pawn::AVBM_Pawn()
@@ -55,7 +58,6 @@ void AVBM_Pawn::Tick(float DeltaTime)
 void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
 
 //-------------------------------------------------------------------------------------------------

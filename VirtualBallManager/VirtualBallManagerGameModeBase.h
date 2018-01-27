@@ -65,6 +65,12 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 	 */
 	virtual void Tick( float DeltaSeconds ) override;
 
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+	/** Overridable function called whenever this actor is being removed from a level */
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
 	FVector GetBallPos();
 
