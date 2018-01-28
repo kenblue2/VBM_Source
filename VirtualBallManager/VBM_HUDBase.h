@@ -43,4 +43,8 @@ protected:
 	TArray<float> BoneVels;
 	TArray<int32> HitFrames;
 	TArray<int32> MatchFrames;
+
+public:
+
+
 };

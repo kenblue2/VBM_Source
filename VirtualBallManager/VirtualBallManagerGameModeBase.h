@@ -101,4 +101,7 @@ public:
 	TArray<FVector> HitBonePosList;
 
 	float LimitSpeed;
+
+	TArray<TArray<FVector>> PosePosList;
+	TArray<TArray<FVector>> PoseVelList;
 };

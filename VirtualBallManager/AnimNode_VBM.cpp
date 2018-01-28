@@ -350,7 +350,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 					float Angle = FMath::Acos(PassDir | HitVel);
 					float DiffPose = CurMatchPose.ClacDiff(UserPose);
 
-					float Cost = DiffPose + Angle * 10.f + Dist;
+					float Cost = DiffPose * 10.f + Angle * 10.f + Dist;
 
 					if (MinCost > Cost)
 					{

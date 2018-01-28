@@ -43,14 +43,13 @@ typedef enum _NUI_SKELETON_POSITION_INDEX
 
 SOCKET serv_sock;
 
+
 TArray<FVector> BonePosList;
 TArray<FVector> BoneVelList;
 
-TArray<TArray<FVector>> PosePosList;
-TArray<TArray<FVector>> PoseVelList;
+FColor BoneColor = FColor::Blue;
 
-FColor BoneColor = FColor::Green;
-
+bool bReceivePose = false;
 
 //-------------------------------------------------------------------------------------------------
 void __cdecl RecvThread(void * p)
@@ -59,6 +58,8 @@ void __cdecl RecvThread(void * p)
 	char buf[1024];
 	while (true)
 	{
+		while (bReceivePose);
+
 		int recvsize = recv(sock, buf, sizeof(buf), 0);
 		if (recvsize <= 0)
 		{
@@ -69,7 +70,7 @@ void __cdecl RecvThread(void * p)
 		//printf("\rserver >> %s\n>> ", buf);
 
 		FVector CurPosList[NUI_SKELETON_POSITION_COUNT];
-		memcpy(CurPosList, buf, sizeof(CurPosList));
+		memcpy(&CurPosList[0], buf, sizeof(CurPosList));
 
 		BonePosList.SetNum(NUI_SKELETON_POSITION_COUNT);
 		BoneVelList.SetNum(NUI_SKELETON_POSITION_COUNT);
@@ -80,14 +81,7 @@ void __cdecl RecvThread(void * p)
 			BonePosList[BoneIdx] = CurPosList[BoneIdx];
 		}
 
-		PosePosList.Add(BonePosList);
-		PoseVelList.Add(BoneVelList);
-
-		if (PosePosList.Num() > 100)
-		{
-			PosePosList.RemoveAt(0);
-			PoseVelList.RemoveAt(0);
-		}
+		bReceivePose = true;
 	}
 }
 
@@ -218,18 +212,18 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
 	DrawPose();
 
-	//int32 NumPoses = PoseVelList.Num();
-	int32 NumPoses = FMath::Min(PoseVelList.Num(), 100);
-	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
+	if (bReceivePose)
 	{
-		float Z1 = PoseVelList[PoseIndex - 1][NUI_SKELETON_POSITION_ANKLE_RIGHT].Size() * 30.f;
-		float Z2 = PoseVelList[PoseIndex][NUI_SKELETON_POSITION_ANKLE_RIGHT].Size() * 30.f;
+		PosePosList.Add(BonePosList);
+		PoseVelList.Add(BoneVelList);
 
-		FVector Pos1(0, (PoseIndex - 1) * 10.f, Z1);
-		FVector Pos2(0, PoseIndex * 10.f, Z2);
+		if (PosePosList.Num() > 100)
+		{
+			PosePosList.RemoveAt(0);
+			PoseVelList.RemoveAt(0);
+		}
 
-		DrawDebugLine(GWorld, Pos1, Pos2, FColor::White);
-		DrawDebugLine(GWorld, FVector(0, 0, LimitSpeed), FVector(0, 1000, LimitSpeed), FColor::Red);
+		bReceivePose = false;
 	}
 
 	for (auto& BallCtrl : BallCtrls)

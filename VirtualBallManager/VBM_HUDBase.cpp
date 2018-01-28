@@ -13,7 +13,7 @@ void AVBM_HUDBase::DrawHUD()
 {
 	Super::DrawHUD();
 
-	if (BoneVels.Num() > 0)
+	/*if (BoneVels.Num() > 0)
 	{
 		for (int32 IdxVel = 1; IdxVel < BoneVels.Num(); ++IdxVel)
 		{
@@ -37,11 +37,32 @@ void AVBM_HUDBase::DrawHUD()
 
 			DrawRect(FLinearColor::Red, X - 3, Y - 3, 7, 7);
 		}
-	}
+	}*/
 
-	//AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
-	//if (pGameMode == NULL)
-	//	return;
+	FVector2D ViewSize;
+	GWorld->GetGameViewport()->GetViewportSize(ViewSize);
+
+	float MidY = ViewSize.Y * 0.5f;
+
+	AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
+	if (pGameMode == NULL || pGameMode->PoseVelList.Num() == 0)
+		return;
+
+	int32 NumPoses = pGameMode->PoseVelList.Num();
+	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
+	{
+		const TArray<FVector>& PreVels = pGameMode->PoseVelList[PoseIndex - 1];
+		const TArray<FVector>& CurVels = pGameMode->PoseVelList[PoseIndex];
+
+		float Y1 = MidY - PreVels[18].Size() * 30.f;
+		float Y2 = MidY - CurVels[18].Size() * 30.f;
+
+		float LimitY = MidY - pGameMode->LimitSpeed;
+
+		DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::White);
+		DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
+		DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::Gray);
+	}
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -39,12 +39,12 @@ struct FPoseMatchInfo
 			(RootVel - Other.RootVel).Size() +
 			(LeftFootVel - Other.LeftFootVel).Size() +
 			(RightFootVel - Other.RightFootVel).Size() +
-			(LeftHandVel - Other.LeftHandVel).Size() +
-			(RightHandVel - Other.RightHandVel).Size() +
+			//(LeftHandVel - Other.LeftHandVel).Size() +
+			//(RightHandVel - Other.RightHandVel).Size() +
 			(LeftFootPos - Other.LeftFootPos).Size() +
-			(LeftFootPos - Other.LeftFootPos).Size() +
-			(RightFootPos - Other.RightFootPos).Size() +
-			(RightHandPos - Other.RightHandPos).Size();
+			(LeftFootPos - Other.LeftFootPos).Size();
+			//(RightFootPos - Other.RightFootPos).Size() +
+			//(RightHandPos - Other.RightHandPos).Size();
 	}
 };
 
