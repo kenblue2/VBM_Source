@@ -54,8 +54,8 @@ void AVBM_HUDBase::DrawHUD()
 		const TArray<FVector>& PreVels = pGameMode->PoseVelList[PoseIndex - 1];
 		const TArray<FVector>& CurVels = pGameMode->PoseVelList[PoseIndex];
 
-		float Y1 = MidY - PreVels[18].Size() * 30.f;
-		float Y2 = MidY - CurVels[18].Size() * 30.f;
+		float Y1 = MidY - PreVels[18].Size();
+		float Y2 = MidY - CurVels[18].Size();
 
 		float LimitY = MidY - pGameMode->LimitSpeed;
 

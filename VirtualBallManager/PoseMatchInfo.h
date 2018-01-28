@@ -25,6 +25,7 @@ struct FPoseMatchInfo
 	FVector RightHandPos;
 
 	float AlignedDegree;
+	FTransform AlignTransform;
 
 	//---------------------------------------------------------------------------------------------
 	FVector CalcOriginalVel(const FVector& Vel) const
@@ -35,15 +36,17 @@ struct FPoseMatchInfo
 	//---------------------------------------------------------------------------------------------
 	float ClacDiff(const FPoseMatchInfo& Other) const
 	{
+		FVector DiffRoot = RootPos - Other.RootPos;
+
 		return
 			(RootVel - Other.RootVel).Size() +
 			(LeftFootVel - Other.LeftFootVel).Size() +
 			(RightFootVel - Other.RightFootVel).Size() +
 			//(LeftHandVel - Other.LeftHandVel).Size() +
 			//(RightHandVel - Other.RightHandVel).Size() +
-			(LeftFootPos - Other.LeftFootPos).Size() +
-			(LeftFootPos - Other.LeftFootPos).Size();
-			//(RightFootPos - Other.RightFootPos).Size() +
+			(LeftFootPos - Other.LeftFootPos + DiffRoot).Size() +
+			(RightFootPos - Other.RightFootPos + DiffRoot).Size();
+			//(LeftHandPos - Other.LeftHandPos).Size() +
 			//(RightHandPos - Other.RightHandPos).Size();
 	}
 };

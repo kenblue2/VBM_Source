@@ -77,7 +77,7 @@ void __cdecl RecvThread(void * p)
 
 		for (int32 BoneIdx = 0; BoneIdx < BoneVelList.Num(); ++BoneIdx)
 		{
-			BoneVelList[BoneIdx] = CurPosList[BoneIdx] - BonePosList[BoneIdx];
+			BoneVelList[BoneIdx] = (CurPosList[BoneIdx] - BonePosList[BoneIdx]) * 30.f;
 			BonePosList[BoneIdx] = CurPosList[BoneIdx];
 		}
 
@@ -86,45 +86,48 @@ void __cdecl RecvThread(void * p)
 }
 
 //-------------------------------------------------------------------------------------------------
-void DrawBone(NUI_SKELETON_POSITION_INDEX joint0, NUI_SKELETON_POSITION_INDEX joint1)
+void DrawBone(const TArray<FVector>& Pose, NUI_SKELETON_POSITION_INDEX joint0, NUI_SKELETON_POSITION_INDEX joint1)
 {
 	if (BonePosList.Num() > 0)
 	{
-		DrawDebugLine(GWorld, BonePosList[joint0], BonePosList[joint1], BoneColor, false, -1.f, 0, 3.f);
+		DrawDebugLine(GWorld, Pose[joint0], Pose[joint1], FColor::White, false, -1.f, 0, 1.f);
 	}
 }
 
 //-------------------------------------------------------------------------------------------------
-void DrawPose()
+void DrawPose(const TArray<FVector>& Pose)
 {
+	if (Pose.Num() < NUI_SKELETON_POSITION_COUNT)
+		return;
+
 	// Render Torso
-	DrawBone(NUI_SKELETON_POSITION_HEAD, NUI_SKELETON_POSITION_SHOULDER_CENTER);
-	DrawBone(NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT);
-	DrawBone(NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SPINE);
-	DrawBone(NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_HIP_CENTER);
-	DrawBone(NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_HEAD, NUI_SKELETON_POSITION_SHOULDER_CENTER);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SPINE);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_HIP_CENTER);
+	DrawBone(Pose, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT);
 
 	// Left Arm
-	DrawBone(NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT);
 
 	// Right Arm
-	DrawBone(NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT);
-	DrawBone(NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT);
-	DrawBone(NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT);
 
 	// Left Leg
-	DrawBone(NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT);
-	DrawBone(NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT);
 
 	// Right Leg
-	DrawBone(NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT);
-	DrawBone(NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT);
-	DrawBone(NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT);
+	DrawBone(Pose, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT);
 }
 
 
@@ -207,10 +210,53 @@ FRotator AVirtualBallManagerGameModeBase::GetBallRot(float DeltaTime)
 	return FQuat(AxisAng.GetSafeNormal(), AxisAng.Size() * DeltaTime).Rotator();
 }
 
+void DrawMatchInfo(const FPoseMatchInfo& MatchInfo)
+{
+	DrawDebugLine(GWorld, MatchInfo.RootPos, MatchInfo.RootPos + MatchInfo.RootVel, FColor::White);
+	DrawDebugLine(GWorld, MatchInfo.LeftFootPos, MatchInfo.LeftFootPos + MatchInfo.LeftFootVel, FColor::Magenta);
+	DrawDebugLine(GWorld, MatchInfo.RightFootPos, MatchInfo.RightFootPos + MatchInfo.RightFootVel, FColor::Cyan);
+	//DrawDebugLine(GWorld, MatchInfo.LeftHandPos, MatchInfo.LeftHandPos + MatchInfo.LeftHandVel, FColor::Red);
+	//DrawDebugLine(GWorld, MatchInfo.RightHandPos, MatchInfo.RightHandPos + MatchInfo.RightHandVel, FColor::Blue);
+
+	DrawDebugPoint(GWorld, MatchInfo.RootPos, 5, FColor::White);
+	DrawDebugPoint(GWorld, MatchInfo.LeftFootPos, 5, FColor::Magenta);
+	DrawDebugPoint(GWorld, MatchInfo.RightFootPos, 5, FColor::Cyan);
+	//DrawDebugPoint(GWorld, MatchInfo.LeftHandPos, 5, FColor::Red);
+	//DrawDebugPoint(GWorld, MatchInfo.RightHandPos, 5, FColor::Blue);
+}
+
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
-	DrawPose();
+	DrawPose(BonePosList);
+
+	/*for (const FVector& FootPos: FootTrajectory)
+	{
+		DrawDebugSphere(GWorld, FootPos, 3.f, 4, FColor::White);
+	}
+
+	for (int32 IdxPos = 1; IdxPos < FootTrajectory.Num(); ++IdxPos)
+	{
+		DrawDebugLine(GWorld, FootTrajectory[IdxPos - 1], FootTrajectory[IdxPos], FColor::White, false, -1.f, 0, 1.f);
+	}*/
+
+	//for (int32 IdxPos = 1; IdxPos < PosePosList.Num(); ++IdxPos)
+	//{
+	//	const FVector& Pos1 = PosePosList[IdxPos - 1][NUI_SKELETON_POSITION_ANKLE_RIGHT];
+	//	const FVector& Pos2 = PosePosList[IdxPos][NUI_SKELETON_POSITION_ANKLE_RIGHT];
+
+	//	DrawDebugLine(GWorld, Pos1, Pos2, FColor::Cyan, false, -1.f, 0, 1.f);
+	//}
+
+	//for (auto& PosePos : PosePosList)
+	//{
+	//	DrawPose(PosePos);
+	//}
+
+	//for (auto& MatchInfo : UserMatchInfos)
+	//{
+	//	DrawMatchInfo(MatchInfo);
+	//}
 
 	if (bReceivePose)
 	{
@@ -222,6 +268,8 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			PosePosList.RemoveAt(0);
 			PoseVelList.RemoveAt(0);
 		}
+
+		SelectPoseMatchByUser(NUI_SKELETON_POSITION_ANKLE_RIGHT);
 
 		bReceivePose = false;
 	}
@@ -235,8 +283,6 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	{
 		BallCtrls.RemoveAt(0);
 	}
-
-	SelectPoseMatchByUser(NUI_SKELETON_POSITION_ANKLE_RIGHT);
 
 	// show current ball trajectory
 	//for (auto& BallCtrl : BallCtrls)
@@ -252,20 +298,26 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	//	}
 	//}
 
-	if (PassOrders.Num() < 3)
+	if (PassOrders.Num() < 3 || FootTrajectories.Num() < 2)
 		return;
 
-	if (PassOrders[0]->pDestPawn == NULL && PassPoses.Num() > 0)
+	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
 	{
-		PassOrders[0]->pDestPawn = PassOrders[1];
-		PassOrders[0]->CreateNextPlayer(PassPoses[0]);
+		PassOrders.Pop();
+		return;
 	}
 
-	if (PassOrders[1]->pDestPawn == NULL && PassPoses.Num() > 1)
+	if (PassOrders[0]->pDestPawn == NULL && PassOrders[0]->bBeginNextMotion == false)
+	{
+		PassOrders[0]->pDestPawn = PassOrders[1];
+		PassOrders[0]->CreateNextPlayer(FootTrajectories[0]);
+	}
+
+	if (PassOrders[1]->pDestPawn == NULL && PassOrders[1]->bBeginNextMotion == false)
 	{
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
-		PassOrders[1]->CreateNextPlayer(PassPoses[1]);
+		PassOrders[1]->CreateNextPlayer(FootTrajectories[1]);
 
 		PassOrders[0]->TimeError += DeltaSeconds;
 		PassOrders[0]->PlayHitMotion();
@@ -279,16 +331,17 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		BallCtrls.Add(BallCtrl);
 	}
 
-	if (PassOrders[0]->bBeginNextMotion && PassPoses.Num() > 1)
+	if (PassOrders[0]->bBeginNextMotion)
 	{
 		PassOrders[0]->pDestPawn = NULL;
+		
 		PassOrders.RemoveAt(0);
-		PassPoses.RemoveAt(0);
+		FootTrajectories.RemoveAt(0);
 	}
 }
 
 //-------------------------------------------------------------------------------------------------
-void AVirtualBallManagerGameModeBase::GeneratePoseMatchInfo(
+FTransform AVirtualBallManagerGameModeBase::GeneratePoseMatchInfo(
 	FPoseMatchInfo& OutInfo, const TArray<FVector>& CSPosList, const TArray<FVector> CSVelList)
 {
 	FVector HipPos = CSPosList[NUI_SKELETON_POSITION_HIP_CENTER];
@@ -307,7 +360,7 @@ void AVirtualBallManagerGameModeBase::GeneratePoseMatchInfo(
 	{
 		FVector LThighPos = CSPosList[NUI_SKELETON_POSITION_HIP_LEFT];
 		FVector RThighPos = CSPosList[NUI_SKELETON_POSITION_HIP_RIGHT];
-
+		
 		FVector Dir1 = LThighPos - HipPos;
 		FVector Dir2 = RThighPos - HipPos;
 
@@ -318,7 +371,8 @@ void AVirtualBallManagerGameModeBase::GeneratePoseMatchInfo(
 	FTransform AlignTransform;
 	{
 		FVector AlignPos = HipPos;
-		AlignPos.Z = 0.f;
+		//AlignPos.Z = 0.f;
+		AlignPos.Z = HipPos.Z - CSPosList[NUI_SKELETON_POSITION_FOOT_LEFT].Z;
 
 		FQuat AlignQuat = FQuat::FindBetween(FrontDir, FVector::ForwardVector);
 
@@ -339,6 +393,8 @@ void AVirtualBallManagerGameModeBase::GeneratePoseMatchInfo(
 	OutInfo.RightFootVel = AlignTransform.TransformVector(RFootVel);
 	OutInfo.LeftHandVel = AlignTransform.TransformVector(LHandVel);
 	OutInfo.RightHandVel = AlignTransform.TransformVector(RHandVel);
+
+	return AlignTransform;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -348,11 +404,11 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser(int32 BoneIndex)
 	{
 		TPair<int32, int32> Section;
 
-		int32 NumPoses = FMath::Min(100, PoseVelList.Num());
+		int32 NumPoses = PoseVelList.Num();
 		for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
 		{
-			float PreSpeed = PoseVelList[PoseIndex - 1][BoneIndex].Size() * 30.f;
-			float CurSpeed = PoseVelList[PoseIndex][BoneIndex].Size() * 30.f;
+			float PreSpeed = PoseVelList[PoseIndex - 1][BoneIndex].Size();
+			float CurSpeed = PoseVelList[PoseIndex][BoneIndex].Size();
 
 			if (PreSpeed < LimitSpeed && CurSpeed > LimitSpeed)
 			{
@@ -373,24 +429,52 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser(int32 BoneIndex)
 	if (HitSections.Num() < 2)
 		return;
 
-	int32 MaxIndex = 0;
-	float MaxBoneSpeed = 0.f;
-
-	for (int32 PoseIndex = HitSections[0].Key; PoseIndex < HitSections[0].Value; ++PoseIndex)
+	FootTrajectory.Empty();
 	{
-		float BoneSpeed = PoseVelList[PoseIndex][BoneIndex].Size() * 30.f;
+		int32 MaxIndex = 0;
+		int32 MinIndex = 0;
 
-		if (BoneSpeed > MaxBoneSpeed)
+		float MaxSpeed = 0.f;
+		float MinSpeed = FLT_MAX;
+
+		for (int32 PoseIndex = HitSections[0].Key; PoseIndex < HitSections[1].Key; ++PoseIndex)
 		{
-			MaxIndex = PoseIndex;
-			MaxBoneSpeed = BoneSpeed;
+			float BoneSpeed = PoseVelList[PoseIndex][BoneIndex].Size();
+
+			if (BoneSpeed > MaxSpeed)
+			{
+				MaxIndex = PoseIndex;
+				MaxSpeed = BoneSpeed;
+			}
+
+			if (BoneSpeed < MinSpeed)
+			{
+				MinIndex = PoseIndex;
+				MinSpeed = BoneSpeed;
+			}
+		}
+
+		//UserMatchInfos.Empty();
+
+		for (int32 PoseIndex = MaxIndex; PoseIndex <= MinIndex; ++PoseIndex)
+		{
+			//FPoseMatchInfo MatchInfo;
+			//GeneratePoseMatchInfo(MatchInfo, PosePosList[PoseIndex], PoseVelList[PoseIndex]);
+
+			//FootTrajectory.Add(MatchInfo.RightFootPos);
+			//FootTrajectory.Add(MatchInfo.RightFootVel);
+
+			//UserMatchInfos.Add(MatchInfo);
+
+			FVector FootPos = PosePosList[PoseIndex][NUI_SKELETON_POSITION_ANKLE_RIGHT];
+			FootTrajectory.Add(FootPos);
 		}
 	}
 
-	FPoseMatchInfo UserPose;
-	GeneratePoseMatchInfo(UserPose, PosePosList[MaxIndex], PoseVelList[MaxIndex]);
-
-	PassPoses.Add(UserPose);
+	if (FootTrajectory.Num() > 0)
+	{
+		FootTrajectories.Add(FootTrajectory);
+	}
 
 	PosePosList.Empty();
 	PoseVelList.Empty();

@@ -126,6 +126,21 @@ bool FAnimNode_VBM::CanBeTransition()
 	return true;
 }
 
+void DrawMatchInfo2(const FPoseMatchInfo& MatchInfo)
+{
+	DrawDebugLine(GWorld, MatchInfo.RootPos, MatchInfo.RootPos + MatchInfo.RootVel, FColor::Yellow);
+	DrawDebugLine(GWorld, MatchInfo.LeftFootPos, MatchInfo.LeftFootPos + MatchInfo.LeftFootVel, FColor::Red);
+	DrawDebugLine(GWorld, MatchInfo.RightFootPos, MatchInfo.RightFootPos + MatchInfo.RightFootVel, FColor::Blue);
+	//DrawDebugLine(GWorld, MatchInfo.LeftHandPos, MatchInfo.LeftHandPos + MatchInfo.LeftHandVel, FColor::Red);
+	//DrawDebugLine(GWorld, MatchInfo.RightHandPos, MatchInfo.RightHandPos + MatchInfo.RightHandVel, FColor::Blue);
+
+	DrawDebugPoint(GWorld, MatchInfo.RootPos, 5, FColor::Yellow);
+	DrawDebugPoint(GWorld, MatchInfo.LeftFootPos, 5, FColor::Red);
+	DrawDebugPoint(GWorld, MatchInfo.RightFootPos, 5, FColor::Blue);
+	//DrawDebugPoint(GWorld, MatchInfo.LeftHandPos, 5, FColor::Red);
+	//DrawDebugPoint(GWorld, MatchInfo.RightHandPos, 5, FColor::Blue);
+}
+
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 {
@@ -261,6 +276,45 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		}
 	}
 
+	if (BestTrajectory.Num() > 0 && UserTrajectory.Num() > 0)
+	{
+		for (const FVector& FootPos : BestTrajectory)
+		{
+			DrawDebugPoint(GWorld, FootPos, 5.f, FColor::Orange);
+		}
+
+		for (int32 IdxPos = 1; IdxPos < BestTrajectory.Num(); ++IdxPos)
+		{
+			FVector Pos1 = BestTrajectory[IdxPos - 1];
+			FVector Pos2 = BestTrajectory[IdxPos];
+
+			DrawDebugLine(GWorld, Pos1, Pos2, FColor::Orange, false, -1.f, 0, 1.f);
+		}
+
+		for (const FVector& FootPos : UserTrajectory)
+		{
+			DrawDebugPoint(GWorld, FootPos, 5.f, FColor::White);
+		}
+
+		for (int32 IdxPos = 1; IdxPos < UserTrajectory.Num(); ++IdxPos)
+		{
+			FVector Pos1 = UserTrajectory[IdxPos - 1];
+			FVector Pos2 = UserTrajectory[IdxPos];
+
+			DrawDebugLine(GWorld, Pos1, Pos2, FColor::White, false, -1.f, 0, 1.f);
+		}
+	}
+
+	
+
+	//if (pVBMPawn->pDestPawn == NULL)
+	//{
+	//	for (auto& MatchInfo : BestPoseMatchInfos)
+	//	{
+	//		DrawMatchInfo2(MatchInfo);
+	//	}
+	//}
+
 /*
 	TArray<FVector> HitPosList;
 
@@ -296,7 +350,155 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPoseMatchInfo& UserPose)
+float CalcTrajectoryDiff(TArray<FVector>& List1, TArray<FVector>& List2)
+{
+	FVector Dir1 = (List1[1] - List1[0]).GetSafeNormal2D();
+	FVector Dir2 = (List2[1] - List2[0]).GetSafeNormal2D();
+
+	FQuat AlignQuat = FQuat::FindBetweenNormals(Dir1, Dir2);
+
+	FVector InitPos1 = List1[0];
+	FVector InitPos2 = List2[0];
+
+	for (FVector& Pos : List1)
+	{
+		Pos = (Pos - InitPos1);
+	}
+
+	for (FVector& Pos : List2)
+	{
+		Pos = AlignQuat.RotateVector(Pos - InitPos2);
+	}
+
+
+	float DiffTraj = 0.f;
+
+	float Scale = (float)(List2.Num() - 1) / (float)(List1.Num() - 1);
+
+	for (int32 IdxPos = 0; IdxPos < List1.Num() - 1; ++IdxPos)
+	{
+		float fIndex = Scale * IdxPos;
+		int32 iIndex = (int32)fIndex;
+		float Alpha = fIndex - iIndex;
+
+		FVector Pos2 = FMath::Lerp(List2[iIndex], List2[iIndex + 1], Alpha);
+
+		float DiffPos = (List1[IdxPos] - Pos2).Size();
+
+		DiffTraj += DiffPos;
+	}
+
+	float DiffEndPos = (List1.Last() - List2.Last()).Size();
+
+	DiffTraj += DiffEndPos;
+
+	return DiffTraj / List1.Num();
+}
+
+//-------------------------------------------------------------------------------------------------
+float CalcTrajectoryDiff2(TArray<FVector>& List1, TArray<FVector>& List2)
+{
+	FVector Dir1 = (List1[1] - List1[0]).GetSafeNormal2D();
+	FVector Dir2 = (List2[1] - List2[0]).GetSafeNormal2D();
+
+	FQuat AlignQuat = FQuat::FindBetweenNormals(Dir1, Dir2);
+
+	FVector InitPos1 = List1[0];
+	FVector InitPos2 = List2[0];
+
+	for (FVector& Pos : List1)
+	{
+		Pos = (Pos - InitPos1);
+	}
+
+	for (FVector& Pos : List2)
+	{
+		Pos = AlignQuat.RotateVector(Pos - InitPos2);
+	}
+
+	FVector Vel1 = List1.Last() / (0.033f * (List1.Num() - 1));
+	FVector Vel2 = List2.Last() / (0.033f * (List2.Num() - 1));
+
+	float Length1 = 0.f;
+	for (int32 IdxPos = 1; IdxPos < List1.Num(); ++IdxPos)
+	{
+		Length1 += (List1[IdxPos - 1] - List1[IdxPos]).Size();
+	}
+
+	float Length2 = 0.f;
+	for (int32 IdxPos = 1; IdxPos < List2.Num(); ++IdxPos)
+	{
+		Length2 += (List2[IdxPos - 1] - List2[IdxPos]).Size();
+	}
+
+	//return FMath::Abs(Length1 - Length2) + (List1.Last() - List2.Last()).Size();
+	//return (Vel1 - Vel2).Size() + (List1.Last() - List2.Last()).Size();
+	return (Vel1 - Vel2).Size() + FMath::Abs(Length1 - Length2);
+}
+
+//-------------------------------------------------------------------------------------------------
+float CalcTrajectoryDiff3(TArray<FVector>& List1, TArray<FVector>& List2)
+{
+	FVector Dir1 = (List1[1] - List1[0]).GetSafeNormal2D();
+	FVector Dir2 = (List2[1] - List2[0]).GetSafeNormal2D();
+
+	FQuat AlignQuat = FQuat::FindBetweenNormals(Dir1, Dir2);
+
+	FVector InitPos1 = List1[0];
+	FVector InitPos2 = List2[0];
+
+	for (FVector& Pos : List1)
+	{
+		Pos = (Pos - InitPos1);
+	}
+
+	for (FVector& Pos : List2)
+	{
+		Pos = AlignQuat.RotateVector(Pos - InitPos2);
+	}
+
+
+	float DiffTraj = 0.f;
+
+	int32 NumSamples = 10;
+
+	float Scale1 = float(List1.Num() - 1) / float(NumSamples);
+	float Scale2 = float(List2.Num() - 1) / float(NumSamples);
+
+	for (int32 IdxPos = 0; IdxPos < NumSamples; ++IdxPos)
+	{
+		FVector Pos1;
+		{
+			float fIndex = Scale1 * IdxPos;
+			int32 iIndex = (int32)fIndex;
+			float Alpha = fIndex - iIndex;
+
+			Pos1 = FMath::Lerp(List1[iIndex], List1[iIndex + 1], Alpha);
+		}
+
+		FVector Pos2;
+		{
+			float fIndex = Scale2 * IdxPos;
+			int32 iIndex = (int32)fIndex;
+			float Alpha = fIndex - iIndex;
+
+			Pos2 = FMath::Lerp(List2[iIndex], List2[iIndex + 1], Alpha);
+		}
+
+		float DiffPos = (Pos1 - Pos2).Size();
+
+		DiffTraj += DiffPos;
+	}
+
+	float DiffEndPos = (List1.Last() - List2.Last()).Size();
+
+	DiffTraj += DiffEndPos;
+
+	return DiffTraj;
+}
+
+//-------------------------------------------------------------------------------------------------
+void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& FootTrajectory)
 {
 	FVector PlayerPos = pPawn->PlayerPos;
 	FVector DestPos = pPawn->pDestPawn->PlayerPos;
@@ -306,11 +508,17 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 	float MinCost = FLT_MAX;
 	FAnimPlayer MinPlayer;
 
+	UserTrajectory = FootTrajectory;
+
 	// select motion clip
 	for (auto& AnimMotionClip : AnimMotionClips)
 	{
 		UAnimSequence* pNextAnim = AnimMotionClip.Key;
 		if (pNextAnim == NULL)
+			continue;
+
+		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
+		if (pMatchInfos == NULL)
 			continue;
 
 		for (auto& MotionClip : AnimMotionClip.Value)
@@ -323,6 +531,23 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
 			}
 
+			TArray<FVector> ClipTrajectory;
+			//for (int32 IdxInfo = MotionClip.HitBeginFrame; IdxInfo <= MotionClip.HitEndFrame; ++IdxInfo)
+			//{
+			//	const FVector& FootPos = (*pMatchInfos)[IdxInfo].RightFootPos;
+			//	ClipTrajectory.Add(FootPos);
+			//}
+
+			for (int32 Frame = MotionClip.HitBeginFrame; Frame <= MotionClip.HitEndFrame; ++Frame)
+			{
+				float Time = pNextAnim->GetTimeAtFrame(Frame);
+				FVector FootPos = CalcBoneCSLocation(pNextAnim, Time, FName("Right_Ankle_Joint_01"), BoneContainer);
+
+				ClipTrajectory.Add(FootPos);
+			}
+
+			float DiffTraj = CalcTrajectoryDiff3(UserTrajectory, ClipTrajectory);
+
 			for (int32 Frame = MotionClip.HitBeginFrame; Frame < MotionClip.HitEndFrame; ++Frame)
 			{
 				float HitTime = pNextAnim->GetTimeAtFrame(Frame);
@@ -334,8 +559,6 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 				FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
 				HitDir = NextPlayer.Align.TransformVector(HitDir);
 
-				TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
-				if (pMatchInfos != NULL)
 				{
 					const FPoseMatchInfo& CurMatchPose = (*pMatchInfos)[Frame - 1];
 
@@ -343,19 +566,21 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 
 					FVector HitVel = HitDir * Speed;
 
-					TArray<FVector> Trajectory;
-					GenerateBallTrajectory(Trajectory, pPawn->PlayerPos, HitVel);
+					TArray<FVector> BallTrajectory;
+					GenerateBallTrajectory(BallTrajectory, pPawn->PlayerPos, HitVel);
 
-					float Dist = (Trajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
+					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
 					float Angle = FMath::Acos(PassDir | HitVel);
-					float DiffPose = CurMatchPose.ClacDiff(UserPose);
 
-					float Cost = DiffPose * 10.f + Angle * 10.f + Dist;
+					//float Cost = Angle * 10.f + Dist;
+					float Cost = DiffTraj;
 
 					if (MinCost > Cost)
 					{
 						MinCost = Cost;
 						MinPlayer = NextPlayer;
+						BestTrajectory = ClipTrajectory;
+						//BestPoseMatchInfos = ClipMatchInfos;
 					}
 				}
 			}
@@ -368,12 +593,12 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, float DiffTime, const FPo
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn, float DiffTime)
+void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn)
 {
 	bIdleState = false;
 
-	NextAnimPlayer.Time += DiffTime;
-	BallTime = BallBeginTime + DiffTime;
+	NextAnimPlayer.Time += pPawn->TimeError;
+	BallTime = BallBeginTime + pPawn->TimeError;
 
 	AnimPlayers.Last().Stop();
 	AnimPlayers.Add(NextAnimPlayer);
@@ -761,7 +986,7 @@ void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVec
 {
 	FVector NewBeginVel = BeginVel;
 
-	while (true)
+	while (Trajectory.Num() > 0)
 	{
 		FVector DestPos = Trajectory.Last();
 		FVector DiffPos = DestPos - EndPos;
@@ -852,6 +1077,11 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 		BallPoss.Add(BallPos);
 	}
 
+	if (BallPoss.Num() > 10000)
+	{
+		BallPoss.Empty();
+	}
+
 	OutTrajectory = BallPoss;
 }
 
@@ -924,7 +1154,7 @@ void FAnimNode_VBM::DrawPose(const FCompactPose& Pose, const FColor& Color)
 		FVector Pos1 = CSPose.GetComponentSpaceTransform(FCompactPoseBoneIndex(IdxBone)).GetTranslation();
 		FVector Pos2 = CSPose.GetComponentSpaceTransform(ParentBoneIndex).GetTranslation();
 
-		DrawDebugLine(GWorld, Pos1, Pos2, Color);
+		DrawDebugLine(GWorld, Pos1, Pos2, Color, false, -1.f, 0, 3.f);
 	}
 }
 
@@ -1115,6 +1345,7 @@ void FAnimNode_VBM::GeneratePoseMatchInfo(FCompactPose& PrevPose, FCompactPose& 
 	FPoseMatchInfo PoseMatchInfo;
 	{
 		PoseMatchInfo.AlignedDegree = AlignedDegree;
+		PoseMatchInfo.AlignTransform = AlignTransform;
 
 		PoseMatchInfo.RootPos = AlignTransform.TransformPosition(CurRootPos);
 		PoseMatchInfo.LeftFootPos = AlignTransform.TransformPosition(CurLFootPos);

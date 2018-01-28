@@ -78,12 +78,13 @@ class VIRTUALBALLMANAGER_API AVirtualBallManagerGameModeBase : public AGameModeB
 	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
 	FRotator GetBallRot(float DeltaTime);
 
+	UFUNCTION(BlueprintCallable, Category = "VBM_GameMode")
+	int32 GetNumTrajectories() { return FootTrajectories.Num(); }
+
 public:
 
-	void GeneratePoseMatchInfo(
-		FPoseMatchInfo& OutInfo,
-		const TArray<FVector>& CSPosList,
-		const TArray<FVector> CSVelList);
+	FTransform GeneratePoseMatchInfo(
+		FPoseMatchInfo& OutInfo, const TArray<FVector>& CSPosList, const TArray<FVector> CSVelList);
 
 	void SelectPoseMatchByUser(int32 BoneIndex);
 
@@ -92,7 +93,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	TArray<class AVBM_Pawn*> PassOrders;
 
-	TArray<FPoseMatchInfo> PassPoses;
+	TArray<TArray<FVector>> FootTrajectories;
+
+	TArray<FVector> FootTrajectory;
 
 	class AVBM_Pawn* pPrevPawn;
 
@@ -104,4 +107,6 @@ public:
 
 	TArray<TArray<FVector>> PosePosList;
 	TArray<TArray<FVector>> PoseVelList;
+
+	TArray<FPoseMatchInfo> UserMatchInfos;
 };

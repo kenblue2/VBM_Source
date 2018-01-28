@@ -61,11 +61,11 @@ void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 }
 
 //-------------------------------------------------------------------------------------------------
-void AVBM_Pawn::CreateNextPlayer(const FPoseMatchInfo& UserPose)
+void AVBM_Pawn::CreateNextPlayer(const TArray<FVector>& Trajectory)
 {
 	if (pAnimNode != NULL)
 	{
-		pAnimNode->CreateNextPlayer(this, TimeError, UserPose);
+		pAnimNode->CreateNextPlayer(this, Trajectory);
 	}
 }
 
@@ -76,7 +76,7 @@ void AVBM_Pawn::PlayHitMotion()
 	{
 		bHitBall = false;
 		bBeginNextMotion = false;
-		pAnimNode->PlayHitMotion(this, TimeError);
+		pAnimNode->PlayHitMotion(this);
 	}
 }
 

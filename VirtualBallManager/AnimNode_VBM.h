@@ -75,9 +75,9 @@ public:
 	/** Override this to perform game-thread work prior to non-game thread Update() being called */
 	virtual void PreUpdate(const UAnimInstance* InAnimInstance);
 
-	void CreateNextPlayer(class AVBM_Pawn* pPawn, float DiffTime, const FPoseMatchInfo& UserPose);
+	void CreateNextPlayer(class AVBM_Pawn* pPawn, const TArray<FVector>& FootTrajectory);
 
-	void PlayHitMotion(class AVBM_Pawn* pPawn, float DiffTime);
+	void PlayHitMotion(class AVBM_Pawn* pPawn);
 
 protected:
 
@@ -166,5 +166,10 @@ public:
 
 	TArray<FVector> PassTrajectory;
 	TArray<FVector> PassTrajectory2;
+
+	TArray<FVector> UserTrajectory;
+	TArray<FVector> BestTrajectory;
+	
+	TArray<FPoseMatchInfo> BestPoseMatchInfos;
 };
 
