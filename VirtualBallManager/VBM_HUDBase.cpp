@@ -13,35 +13,39 @@ void AVBM_HUDBase::DrawHUD()
 {
 	Super::DrawHUD();
 
-	/*if (BoneVels.Num() > 0)
+	FVector2D ViewSize;
+	GWorld->GetGameViewport()->GetViewportSize(ViewSize);
+
+	float MidY = ViewSize.Y * 0.5f;
+
+	if (BoneVels.Num() > 0)
 	{
 		for (int32 IdxVel = 1; IdxVel < BoneVels.Num(); ++IdxVel)
 		{
 			float X1 = (IdxVel - 1) * 2.f;
 			float X2 = (IdxVel    ) * 2.f;
 
-			float Y1 = GraphHeight - BoneVels[IdxVel - 1] * ScaleY;
-			float Y2 = GraphHeight - BoneVels[IdxVel    ] * ScaleY;
+			float Y1 = MidY - BoneVels[IdxVel - 1] * ScaleY;
+			float Y2 = MidY - BoneVels[IdxVel    ] * ScaleY;
 
 			DrawLine(X1, Y1, X2, Y2, FLinearColor::Black, 1.f);
-
-			float LimitY = GraphHeight - LimitVel * ScaleY;
-
-			DrawLine(0, LimitY, 10000, LimitY, FLinearColor::Gray);
 		}
+
+		float LimitY = MidY - LimitVel * ScaleY;
+
+		DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
+		DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::White);
 
 		for (int32 HitFrame : HitFrames)
 		{
 			float X = (HitFrame - 1) * 2.f;
-			float Y = GraphHeight - BoneVels[HitFrame - 1] * ScaleY;
+			float Y = MidY - BoneVels[HitFrame - 1] * ScaleY;
 
 			DrawRect(FLinearColor::Red, X - 3, Y - 3, 7, 7);
 		}
-	}*/
+	}
 
-	FVector2D ViewSize;
-	GWorld->GetGameViewport()->GetViewportSize(ViewSize);
-
+	/*
 	float MidY = ViewSize.Y * 0.5f;
 
 	AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
@@ -62,7 +66,7 @@ void AVBM_HUDBase::DrawHUD()
 		DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::White);
 		DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
 		DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::Gray);
-	}
+	}*/
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -77,9 +81,12 @@ void AVBM_HUDBase::AnalyzeMotion(const UAnimInstance* pAnimInst)
 	const FReferenceSkeleton& RefSkel = pAnimInst->CurrentSkeleton->GetReferenceSkeleton();
 
 	//int32 LFootIndex = RefSkel.FindBoneIndex(FName("Left_Ankle_Joint_01"));
-	int32 RFootIndex = RefSkel.FindBoneIndex(FName("Right_Ankle_Joint_01"));
+	//int32 RFootIndex = RefSkel.FindBoneIndex(FName("Right_Ankle_Joint_01"));
+	int32 BoneIndex = RefSkel.FindBoneIndex(BoneName);
+	if (BoneIndex < 0)
+		return;
 
-	SearchHitFrames(RFootIndex, pAnimInst->GetRequiredBones());
+	SearchHitFrames(BoneIndex, pAnimInst->GetRequiredBones());
 }
 
 //-------------------------------------------------------------------------------------------------

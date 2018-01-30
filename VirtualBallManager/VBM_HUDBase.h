@@ -18,13 +18,13 @@ class VIRTUALBALLMANAGER_API AVBM_HUDBase : public AHUD
 	UAnimSequence* Anim;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
-	float GraphHeight = 400.f;
-
-	UPROPERTY(EditAnywhere, Category = Settings)
 	float ScaleY = 20.f;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
 	float LimitVel = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	FName BoneName = "Right_Ankle_Joint_01";
 
 public:
 
