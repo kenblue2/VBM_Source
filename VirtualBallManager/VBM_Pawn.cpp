@@ -74,7 +74,6 @@ void AVBM_Pawn::PlayHitMotion()
 {
 	if (pAnimNode != NULL)
 	{
-		bHitBall = false;
 		bBeginNextMotion = false;
 		pAnimNode->PlayHitMotion(this);
 	}

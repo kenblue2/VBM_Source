@@ -313,7 +313,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[0]->CreateNextPlayer(FootTrajectories[0]);
 	}
 
-	if (PassOrders[1]->pDestPawn == NULL && PassOrders[1]->bBeginNextMotion == false)
+	if (PassOrders[1]->pDestPawn == NULL)
 	{
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
