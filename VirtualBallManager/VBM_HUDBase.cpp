@@ -70,6 +70,12 @@ void AVBM_HUDBase::DrawHUD()
 	if (pGameMode == NULL || pGameMode->PosePosList.Num() == 0)
 		return;
 
+	float LimitMinY = ViewSize.Y - pGameMode->LimitMinHeight * ScaleY;
+	float LimitMaxY = ViewSize.Y - pGameMode->LimitMaxHeight * ScaleY;
+
+	DrawLine(0, LimitMinY, ViewSize.X, LimitMinY, FLinearColor::Blue);
+	DrawLine(0, LimitMaxY, ViewSize.X, LimitMaxY, FLinearColor::Red);
+
 	int32 NumPoses = pGameMode->PosePosList.Num();
 	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
 	{
@@ -79,13 +85,18 @@ void AVBM_HUDBase::DrawHUD()
 		float Y1 = ViewSize.Y - PreBonePos.Z * ScaleY;
 		float Y2 = ViewSize.Y - CurBonePos.Z * ScaleY;
 
-		float LimitMinY = ViewSize.Y - pGameMode->LimitMinHeight * ScaleY;
-		float LimitMaxY = ViewSize.Y - pGameMode->LimitMaxHeight * ScaleY;
-
 		DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::White);
-		DrawLine(0, LimitMinY, ViewSize.X, LimitMinY, FLinearColor::Blue);
-		DrawLine(0, LimitMaxY, ViewSize.X, LimitMaxY, FLinearColor::Red);
-		//DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::Gray);
+	}
+
+	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
+	{
+		const FVector& PreBonePos = pGameMode->PosePosList[PoseIndex - 1][14];
+		const FVector& CurBonePos = pGameMode->PosePosList[PoseIndex][14];
+
+		float Y1 = ViewSize.Y - PreBonePos.Z * ScaleY;
+		float Y2 = ViewSize.Y - CurBonePos.Z * ScaleY;
+
+		DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::Yellow);
 	}
 }
 

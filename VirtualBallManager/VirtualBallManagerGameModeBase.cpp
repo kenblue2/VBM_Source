@@ -270,7 +270,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			PoseVelList.RemoveAt(0);
 		}
 
-		//SelectPoseMatchByUser(NUI_SKELETON_POSITION_ANKLE_RIGHT);
+		SelectPoseMatchByUser2(NUI_SKELETON_POSITION_ANKLE_LEFT);
 		SelectPoseMatchByUser2(NUI_SKELETON_POSITION_ANKLE_RIGHT);
 
 		bReceivePose = false;
@@ -300,7 +300,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		}
 	}
 
-	if (PassOrders.Num() < 3 /*|| FootTrajectories.Num() < 2*/)
+	if (PassOrders.Num() < 3 || FootTrajectories.Num() < 2)
 		return;
 
 	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
@@ -312,16 +312,18 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	if (PassOrders[0]->pDestPawn == NULL && PassOrders[0]->bBeginNextMotion == false)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
-		//PassOrders[0]->CreateNextPlayer(FootTrajectories[0]);
-		PassOrders[0]->CreateNextPlayer();
+		
+		//PassOrders[0]->CreateNextPlayer();
+		PassOrders[0]->CreateNextPlayer(FootTrajectories[0], bUseLeftFootList[0]);
 	}
 
 	if (PassOrders[1]->pDestPawn == NULL)
 	{
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
-		//PassOrders[1]->CreateNextPlayer(FootTrajectories[1]);
-		PassOrders[1]->CreateNextPlayer();
+		
+		//PassOrders[1]->CreateNextPlayer();
+		PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1]);
 
 		PassOrders[0]->TimeError += DeltaSeconds;
 		PassOrders[0]->PlayHitMotion();
@@ -340,7 +342,8 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[0]->pDestPawn = NULL;
 		
 		PassOrders.RemoveAt(0);
-		//FootTrajectories.RemoveAt(0);
+		bUseLeftFootList.RemoveAt(0);
+		FootTrajectories.RemoveAt(0);
 	}
 }
 
@@ -542,6 +545,15 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser2(int32 BoneIndex)
 	if (FootTrajectory.Num() > 0)
 	{
 		FootTrajectories.Add(FootTrajectory);
+
+		if (BoneIndex == NUI_SKELETON_POSITION_ANKLE_LEFT)
+		{
+			bUseLeftFootList.Add(true);
+		}
+		else
+		{
+			bUseLeftFootList.Add(false);
+		}
 	}
 
 	PosePosList.Empty();

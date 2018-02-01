@@ -501,7 +501,7 @@ float CalcTrajectoryDiff3(TArray<FVector>& List1, TArray<FVector>& List2)
 
 	DiffTraj += DiffEndPos;
 
-	return DiffTraj;
+	return DiffTraj / (float)NumSamples;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -539,7 +539,7 @@ float CalcTrajectoryDiff4(TArray<FVector>& UserMove, TArray<FVector>& CharMove)
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& FootTrajectory)
+void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& FootTrajectory, bool bUseLeftFoot)
 {
 	FVector PlayerPos = pPawn->PlayerPos;
 	FVector DestPos = pPawn->pDestPawn->PlayerPos;
@@ -556,6 +556,9 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 	{
 		UAnimSequence* pNextAnim = AnimMotionClip.Key;
 		if (pNextAnim == NULL)
+			continue;
+
+		if (bUseLeftFoot && pNextAnim->BoneName != FName("Left_Ankle_Joint_01"))
 			continue;
 
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
@@ -584,10 +587,10 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 				//	ClipTrajectory.Add(FootPos);
 				//}
 
-				int32 BeginFrame = MotionClip.HitBeginFrame;
-				int32 EndFrame = BeginFrame + UserTrajectory.Num();
-				for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
-					//for (int32 Frame = MotionClip.HitBeginFrame; Frame <= MotionClip.HitEndFrame; ++Frame)
+				//int32 BeginFrame = MotionClip.HitBeginFrame;
+				//int32 EndFrame = BeginFrame + UserTrajectory.Num();
+				//for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
+				for (int32 Frame = MotionClip.HitBeginFrame; Frame <= MotionClip.HitEndFrame; ++Frame)
 				{
 					float Time = pNextAnim->GetTimeAtFrame(Frame);
 
@@ -604,8 +607,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 					ClipTrajectory.Add(FootPos);
 				}
 
-				//DiffTraj = CalcTrajectoryDiff3(UserTrajectory, ClipTrajectory);
-				DiffTraj = CalcTrajectoryDiff4(UserTrajectory, ClipTrajectory);
+				DiffTraj = CalcTrajectoryDiff3(UserTrajectory, ClipTrajectory);
 			}
 
 			for (int32 Frame = MotionClip.HitBeginFrame; Frame < MotionClip.HitEndFrame; ++Frame)
@@ -653,8 +655,8 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
 					float Angle = FMath::Acos(PassDir | HitDir);
 
-					//float Cost = Angle * 10.f + Dist;
-					float Cost = DiffTraj + Angle * 10.f + Dist;
+					float Cost = Angle * 100.f + Dist;
+					//float Cost = DiffTraj + Angle * 10.f + Dist;
 
 					if (MinCost > Cost)
 					{
@@ -1159,9 +1161,12 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVector& BeginVel, const FVector& EndPos)
 {
+	int32 NumIter = 0;
+	int32 MaxIter = 10000;
+
 	FVector NewBeginVel = BeginVel;
 
-	while (Trajectory.Num() > 0)
+	while (Trajectory.Num() > 0 && NumIter < MaxIter)
 	{
 		FVector DestPos = Trajectory.Last();
 		FVector DiffPos = DestPos - EndPos;
@@ -1204,6 +1209,8 @@ void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVec
 		NewBeginVel += DeltaDir;
 
 		GenerateBallTrajectory(Trajectory, Trajectory[0], NewBeginVel, EndPos);
+
+		++NumIter;
 	}
 }
 

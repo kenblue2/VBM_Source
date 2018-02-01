@@ -66,16 +66,16 @@ void AVBM_Pawn::CreateNextPlayer()
 	if (pAnimNode != NULL)
 	{
 		TArray<FVector> Trajectory;
-		pAnimNode->CreateNextPlayer(this, Trajectory);
+		pAnimNode->CreateNextPlayer(this, Trajectory, false);
 	}
 }
 
 //-------------------------------------------------------------------------------------------------
-void AVBM_Pawn::CreateNextPlayer(const TArray<FVector>& Trajectory)
+void AVBM_Pawn::CreateNextPlayer(const TArray<FVector>& Trajectory, bool bUseLeftFoot)
 {
 	if (pAnimNode != NULL)
 	{
-		pAnimNode->CreateNextPlayer(this, Trajectory);
+		pAnimNode->CreateNextPlayer(this, Trajectory, bUseLeftFoot);
 	}
 }
 
