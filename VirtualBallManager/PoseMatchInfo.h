@@ -4,6 +4,8 @@
 //-------------------------------------------------------------------------------------------------
 struct FHitSection
 {
+	FHitSection() : BeginFrame(-1), EndFrame(-1) {}
+
 	int32 BeginFrame;
 	int32 EndFrame;
 };
@@ -12,6 +14,8 @@ struct FHitSection
 //-------------------------------------------------------------------------------------------------
 struct FPoseMatchInfo
 {
+	bool bUseLeftFoot;
+
 	FVector RootVel;
 	FVector LeftFootVel;
 	FVector RightFootVel;

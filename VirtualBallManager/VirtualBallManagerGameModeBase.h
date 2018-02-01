@@ -87,11 +87,21 @@ public:
 		FPoseMatchInfo& OutInfo, const TArray<FVector>& CSPosList, const TArray<FVector> CSVelList);
 
 	void SelectPoseMatchByUser(int32 BoneIndex);
+	void SelectPoseMatchByUser2(int32 BoneIndex);
 
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	TArray<class AVBM_Pawn*> PassOrders;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	float LimitMaxHeight = 40.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	float LimitMinHeight = 15.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	int32 MaxUserFrame = 100;
 
 	TArray<TArray<FVector>> FootTrajectories;
 

@@ -171,9 +171,16 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			{
 				GeneratePoseMatchInfos(pAnim, RequiredBones);
 
-				FPoseMatchInfo& FirstMatchInfo = AnimPoseInfos.CreateIterator()->Value[0];
+				FPoseMatchInfo& IdleMatchInfo = AnimPoseInfos.CreateIterator()->Value[0];
 
-				AnalyzeMotion(FirstMatchInfo);
+				if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+				{
+					AnalyzeMotionByRightFoot(IdleMatchInfo);
+				}
+				else
+				{
+					AnalyzeMotionByLeftFoot(IdleMatchInfo);
+				}
 			}
 		}
 	}
@@ -565,50 +572,86 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
 			}
 
+			float DiffTraj = 0.f;
+
 			TArray<FVector> ClipTrajectory;
-			//for (int32 IdxInfo = MotionClip.HitBeginFrame; IdxInfo <= MotionClip.HitEndFrame; ++IdxInfo)
-			//{
-			//	const FVector& FootPos = (*pMatchInfos)[IdxInfo].RightFootPos;
-			//	ClipTrajectory.Add(FootPos);
-			//}
 
-			int32 BeginFrame = MotionClip.HitBeginFrame;
-			int32 EndFrame = BeginFrame + UserTrajectory.Num();
-			for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
-			//for (int32 Frame = MotionClip.HitBeginFrame; Frame <= MotionClip.HitEndFrame; ++Frame)
+			if (UserTrajectory.Num() > 0)
 			{
-				float Time = pNextAnim->GetTimeAtFrame(Frame);
-				FVector FootPos = CalcBoneCSLocation(pNextAnim, Time, FName("Right_Ankle_Joint_01"), BoneContainer);
+				//for (int32 IdxInfo = MotionClip.HitBeginFrame; IdxInfo <= MotionClip.HitEndFrame; ++IdxInfo)
+				//{
+				//	const FVector& FootPos = (*pMatchInfos)[IdxInfo].RightFootPos;
+				//	ClipTrajectory.Add(FootPos);
+				//}
 
-				ClipTrajectory.Add(FootPos);
+				int32 BeginFrame = MotionClip.HitBeginFrame;
+				int32 EndFrame = BeginFrame + UserTrajectory.Num();
+				for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
+					//for (int32 Frame = MotionClip.HitBeginFrame; Frame <= MotionClip.HitEndFrame; ++Frame)
+				{
+					float Time = pNextAnim->GetTimeAtFrame(Frame);
+
+					FVector FootPos;
+					if (pNextAnim->BoneName == FName("Right_Ankle_Joint_01"))
+					{
+						FootPos = CalcBoneCSLocation(pNextAnim, Time, FName("Right_Ankle_Joint_01"), BoneContainer);
+					}
+					else
+					{
+						FootPos = CalcBoneCSLocation(pNextAnim, Time, FName("Left_Ankle_Joint_01"), BoneContainer);
+					}
+
+					ClipTrajectory.Add(FootPos);
+				}
+
+				//DiffTraj = CalcTrajectoryDiff3(UserTrajectory, ClipTrajectory);
+				DiffTraj = CalcTrajectoryDiff4(UserTrajectory, ClipTrajectory);
 			}
-
-			//float DiffTraj = CalcTrajectoryDiff3(UserTrajectory, ClipTrajectory);
-			float DiffTraj = CalcTrajectoryDiff4(UserTrajectory, ClipTrajectory);
 
 			for (int32 Frame = MotionClip.HitBeginFrame; Frame < MotionClip.HitEndFrame; ++Frame)
 			{
+				//float CosVal = (*pMatchInfos)[Frame].RightFootVel.GetSafeNormal2D() | FVector::ForwardVector;
+				//if (CosVal < 0.f)
+				//	continue;
+
 				float HitTime = pNextAnim->GetTimeAtFrame(Frame);
 
-				FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
-				FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Knee_Joint_01"), BoneContainer);
-				FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
-				
-				FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+				const FPoseMatchInfo& CurMatchPose = (*pMatchInfos)[Frame - 1];
+
+				FVector HitDir;
+				float FootSpeed;
+				if (pNextAnim->BoneName == FName("Right_Ankle_Joint_01"))
+				{
+					FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
+					FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Knee_Joint_01"), BoneContainer);
+					FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
+
+					HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+					FootSpeed = CurMatchPose.RightFootVel.Size();
+				}
+				else
+				{
+					FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Ankle_Joint_01"), BoneContainer);
+					FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Knee_Joint_01"), BoneContainer);
+					FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Toe_Joint_01"), BoneContainer);
+
+					HitDir = ((KneePos - AnklePos) ^ (ToePos - AnklePos)).GetSafeNormal();
+					FootSpeed = CurMatchPose.LeftFootVel.Size();
+				}
+
 				HitDir = NextPlayer.Align.TransformVector(HitDir);
 
 				{
-					const FPoseMatchInfo& CurMatchPose = (*pMatchInfos)[Frame - 1];
-
-					float Speed = CurMatchPose.RightFootVel.Size();
-
-					FVector HitVel = HitDir * Speed;
+					FVector HitVel = HitDir * FootSpeed;
 
 					TArray<FVector> BallTrajectory;
 					GenerateBallTrajectory(BallTrajectory, pPawn->PlayerPos, HitVel);
 
+					if (BallTrajectory.Num() == 0)
+						continue;
+
 					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
-					float Angle = FMath::Acos(PassDir | HitVel);
+					float Angle = FMath::Acos(PassDir | HitDir);
 
 					//float Cost = Angle * 10.f + Dist;
 					float Cost = DiffTraj + Angle * 10.f + Dist;
@@ -897,18 +940,39 @@ FVector FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, const FMotionClip& Clip,
 	{
 		float HitTime = pAnim->GetTimeAtFrame(Frame);
 
-		FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
-		FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
-		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+		FVector HitDir;
+		if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+		{
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
 
-		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+			HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+		}
+		else
+		{
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Toe_Joint_01"), RequiredBones);
+
+			HitDir = ((KneePos - AnklePos) ^ (ToePos - AnklePos)).GetSafeNormal();
+		}
 
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
 		if (pMatchInfos != NULL)
 		{
-			float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+			if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+			{
+				float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
 
-			AvgHitDir += HitDir * Speed;
+				AvgHitDir += HitDir * Speed;
+			}
+			else
+			{
+				float Speed = (*pMatchInfos)[Frame - 1].LeftFootVel.Size();
+
+				AvgHitDir += HitDir * Speed;
+			}
 		}
 	}
 
@@ -924,16 +988,37 @@ FVector FAnimNode_VBM::GetMaxHitVel(UAnimSequence* pAnim, const FMotionClip& Cli
 	{
 		float HitTime = pAnim->GetTimeAtFrame(Frame);
 
-		FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
-		FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
-		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+		FVector HitDir;
+		if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+		{
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
 
-		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+			HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+		}
+		else
+		{
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Toe_Joint_01"), RequiredBones);
+
+			HitDir = ((KneePos - AnklePos) ^ (ToePos - AnklePos)).GetSafeNormal();
+		}
 
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
 		if (pMatchInfos != NULL)
 		{
-			float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+			float Speed;
+
+			if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+			{
+				Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+			}
+			else
+			{
+				Speed = (*pMatchInfos)[Frame - 1].LeftFootVel.Size();
+			}
 
 			if (MaxHitVel.Size() < Speed)
 			{
@@ -956,27 +1041,71 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 	{
 		float HitTime = pAnim->GetTimeAtFrame(Frame);
 
-		FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
-		FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
-		FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+		//FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+		//FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+		//FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
 
-		FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
-		FVector RotAxis = ((KneePos - AnklePos) ^ HitDir).GetSafeNormal();
+		FVector HitPos;
+		FVector HitDir;
+		FVector RotAxis;
 
-		USkeletalMeshSocket* pHitSocket = pAnim->GetSkeleton()->FindSocket("Right_Hit_Socket");
-		if (pHitSocket != NULL)
+		if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
 		{
-			FTransform ToeTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
-			ToePos = (pHitSocket->GetSocketLocalTransform() * ToeTrans).GetTranslation();
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Right_Toe_Joint_01"), RequiredBones);
+
+			HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+			RotAxis = ((KneePos - AnklePos) ^ HitDir).GetSafeNormal();
+			HitPos = ToePos;
+
+			if (HitPos.Z < BallRadius)
+				continue;
 		}
+		else
+		{
+			FVector AnklePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Ankle_Joint_01"), RequiredBones);
+			FVector KneePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Knee_Joint_01"), RequiredBones);
+			FVector ToePos = CalcBoneCSLocation(pAnim, HitTime, FName("Left_Toe_Joint_01"), RequiredBones);
+
+			HitDir = ((KneePos - AnklePos) ^ (ToePos - AnklePos)).GetSafeNormal();
+			//RotAxis = ((KneePos - AnklePos) ^ HitDir).GetSafeNormal();
+			RotAxis = (HitDir ^ (KneePos - AnklePos)).GetSafeNormal();
+			HitPos = ToePos;
+
+			if (HitPos.Z < BallRadius)
+				continue;
+		}
+
+		//FVector HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+		//FVector RotAxis = ((KneePos - AnklePos) ^ HitDir).GetSafeNormal();
+
+		//USkeletalMeshSocket* pHitSocket = pAnim->GetSkeleton()->FindSocket("Right_Hit_Socket");
+		//if (pHitSocket != NULL)
+		//{
+		//	FTransform ToeTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
+		//	ToePos = (pHitSocket->GetSocketLocalTransform() * ToeTrans).GetTranslation();
+
+		//	if (ToePos.Z < BallRadius)
+		//		continue;
+		//}
 
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pAnim);
 		if (pMatchInfos != NULL)
 		{
-			float Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+			float Speed;
+
+			if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
+			{
+				Speed = (*pMatchInfos)[Frame - 1].RightFootVel.Size();
+			}
+			else
+			{
+				Speed = (*pMatchInfos)[Frame - 1].LeftFootVel.Size();
+			}
 
 			NextHitVels.Add(HitDir * Speed);
-			NextHitPoss.Add(ToePos);
+			NextHitPoss.Add(HitPos);
 			NextAxisAngs.Add(RotAxis * Speed * RotRatio);
 		}
 	}
@@ -988,11 +1117,19 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 	float Pz0 = BeginPos.Z;
 	float Vz0 = BeginVel.Z;
 
-	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * Pz0)) / GRAVITY;
+	float Eq0 = Vz0 * Vz0 + 2.f * GRAVITY * Pz0;
+	if (Eq0 < 0.f)
+		return;
+
+	float t1 = (Vz0 + FMath::Sqrt(Eq0)) / GRAVITY;
 
 	float Vz1 = GRAVITY * t1 - Vz0;
 
-	float t2 = (Vz1 + FMath::Sqrt(Vz1 * Vz1 - 2.f * GRAVITY * Pz0)) / GRAVITY;
+	float Eq1 = Vz1 * Vz1 - 2.f * GRAVITY * Pz0;
+	if (Eq1 < 0.f)
+		return;
+
+	float t2 = (Vz1 + FMath::Sqrt(Eq1)) / GRAVITY;
 
 	FVector BallPos;
 	TArray<FVector> BallPoss;
@@ -1078,14 +1215,22 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 
 	float Pz0 = BeginPos.Z;
 	float Vz0 = BeginVel.Z;
+	
+	float Eq0 = Vz0 * Vz0 + 2.f * GRAVITY * (Pz0 - BallRadius);
+	if (Eq0 < 0.f)
+		return;
+
 	//float Pz1 = Pz0;
 	float Pz1 = BallRadius;
 
-	float t1 = (Vz0 + FMath::Sqrt(Vz0 * Vz0 + 2.f * GRAVITY * (Pz0 - BallRadius))) / GRAVITY;
-
+	float t1 = (Vz0 + FMath::Sqrt(Eq0)) / GRAVITY;
 	float Vz1 = (GRAVITY * t1 - Vz0) * BallElasicity;
 
-	float t2 = (Vz1 + FMath::Sqrt(Vz1 * Vz1 - 2.f * GRAVITY * (Pz1 - BallRadius))) / GRAVITY;
+	float Eq2 = Vz1 * Vz1 - 2.f * GRAVITY * (Pz1 - BallRadius);
+	if (Eq2 < 0.f)
+		return;
+
+	float t2 = (Vz1 + FMath::Sqrt(Eq2)) / GRAVITY;
 
 	FVector BallPos;
 	TArray<FVector> BallPoss;
@@ -1113,11 +1258,6 @@ void FAnimNode_VBM::GenerateBallTrajectory(
 		}
 
 		BallPoss.Add(BallPos);
-	}
-
-	if (BallPoss.Num() > 10000)
-	{
-		BallPoss.Empty();
 	}
 
 	OutTrajectory = BallPoss;
@@ -1488,7 +1628,7 @@ float FAnimNode_VBM::CalcMatchCost(const FPoseMatchInfo& CurMatchInfo, const FPo
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& MatchInfo)
+void FAnimNode_VBM::AnalyzeMotionByRightFoot(const FPoseMatchInfo& IdleMatchInfo)
 {
 	for (const auto& AnimPoseInfo : AnimPoseInfos)
 	{
@@ -1499,71 +1639,77 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& MatchInfo)
 		int NumInfos = PoseMatchInfos.Num() - 1;
 		for (int32 IdxInfo = 1; IdxInfo < NumInfos; ++IdxInfo)
 		{
-			float RFootVel = PoseMatchInfos[IdxInfo].RightFootVel.Size();
+			float FootHeight = PoseMatchInfos[IdxInfo].RightFootPos.Z;
 
-			if (RFootVel > LimitVel &&
-				RFootVel > PoseMatchInfos[IdxInfo - 1].RightFootVel.Size() &&
-				RFootVel > PoseMatchInfos[IdxInfo + 1].RightFootVel.Size())
+			if (FootHeight > LimitMaxHeight &&
+				FootHeight > PoseMatchInfos[IdxInfo - 1].RightFootPos.Z &&
+				FootHeight > PoseMatchInfos[IdxInfo + 1].RightFootPos.Z)
 			{
 				LocalMaxIndices.Add(IdxInfo);
 			}
 		}
 
-		TArray<int32> HitFrames;
 		TArray<FHitSection> HitSections;
 
-		for (int32 IdxMax = 1; IdxMax < LocalMaxIndices.Num(); ++IdxMax)
+		for (int32 MaxIndex : LocalMaxIndices)
 		{
-			int32 BeginIndex = LocalMaxIndices[IdxMax - 1];
-			int32 EndIndex = LocalMaxIndices[IdxMax];
+			int32 PoseIndex = MaxIndex;
 
-			TArray<int32> LocalMinIndices;
-			for (int32 IdxInfo = BeginIndex + 1; IdxInfo < EndIndex; ++IdxInfo)
+			FHitSection HitSec;
+
+			while(true)
 			{
-				float RFootVel = PoseMatchInfos[IdxInfo].RightFootVel.Size();
+				--PoseIndex;
 
-				if (RFootVel < LimitVel &&
-					RFootVel < PoseMatchInfos[IdxInfo - 1].RightFootVel.Size() &&
-					RFootVel < PoseMatchInfos[IdxInfo + 1].RightFootVel.Size())
+				if (PoseMatchInfos[PoseIndex].RightFootPos.Z < LimitMinHeight)
 				{
-					LocalMinIndices.Add(IdxInfo);
+					HitSec.BeginFrame = PoseIndex + 1;
+					break;
 				}
 			}
 
-			if (LocalMinIndices.Num() == 1)
-			{
-				HitFrames.Add(LocalMinIndices[0] + 1);
+			PoseIndex = MaxIndex;
 
-				FHitSection HitSec;
+			while (true)
+			{
+				++PoseIndex;
+
+				if (PoseMatchInfos[PoseIndex].RightFootPos.Z < LimitMinHeight)
 				{
-					HitSec.BeginFrame = BeginIndex + 1;
-					HitSec.EndFrame = HitFrames.Last();
+					HitSec.EndFrame = PoseIndex + 1;
+					break;
 				}
+			}
+
+			HitSec.BeginFrame = (HitSec.BeginFrame + MaxIndex) * 0.5f;
+			HitSec.EndFrame = MaxIndex;
+
+			if (HitSec.BeginFrame < HitSec.EndFrame)
+			{
 				HitSections.Add(HitSec);
 			}
 		}
 
-		if (HitFrames.Num() > 0)
+		if (HitSections.Num() > 0)
 		{
-			AnimHitFrames.Add(AnimPoseInfo.Key, HitFrames);
 			AnimHitSections.Add(AnimPoseInfo.Key, HitSections);
 		}
 
 		TArray<int32> MatchFrames;
 
-		int NumHit = HitFrames.Num();
+		int NumHit = HitSections.Num();
 		for (int32 IdxHit = 0; IdxHit <= NumHit; ++IdxHit)
 		{
 			int32 BeginFrame = 0;
 			if (IdxHit > 0)
 			{
-				BeginFrame = HitFrames[IdxHit - 1] + 1;
+				BeginFrame = HitSections[IdxHit - 1].EndFrame;
 			}
 
 			int32 EndFrame = PoseMatchInfos.Num();
 			if (IdxHit < NumHit)
 			{
-				EndFrame = HitFrames[IdxHit];
+				EndFrame = HitSections[IdxHit].BeginFrame;
 			}
 
 			float MinCost = FLT_MAX;
@@ -1571,7 +1717,7 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& MatchInfo)
 
 			for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
 			{
-				float Cost = CalcMatchCost(PoseMatchInfos[Frame], MatchInfo);
+				float Cost = CalcMatchCost(PoseMatchInfos[Frame], IdleMatchInfo);
 
 				if (Cost < MinCost)
 				{
@@ -1624,6 +1770,152 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& MatchInfo)
 		}
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+void FAnimNode_VBM::AnalyzeMotionByLeftFoot(const FPoseMatchInfo& IdleMatchInfo)
+{
+	for (const auto& AnimPoseInfo : AnimPoseInfos)
+	{
+		TArray<int32> LocalMaxIndices;
+
+		const TArray<FPoseMatchInfo>& PoseMatchInfos = AnimPoseInfo.Value;
+
+		int NumInfos = PoseMatchInfos.Num() - 1;
+		for (int32 IdxInfo = 1; IdxInfo < NumInfos; ++IdxInfo)
+		{
+			float FootHeight = PoseMatchInfos[IdxInfo].LeftFootPos.Z;
+
+			if (FootHeight > LimitMaxHeight &&
+				FootHeight > PoseMatchInfos[IdxInfo - 1].LeftFootPos.Z &&
+				FootHeight > PoseMatchInfos[IdxInfo + 1].LeftFootPos.Z)
+			{
+				LocalMaxIndices.Add(IdxInfo);
+			}
+		}
+
+		TArray<FHitSection> HitSections;
+
+		for (int32 MaxIndex : LocalMaxIndices)
+		{
+			int32 PoseIndex = MaxIndex;
+
+			FHitSection HitSec;
+
+			while (true)
+			{
+				--PoseIndex;
+
+				if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < LimitMinHeight)
+				{
+					HitSec.BeginFrame = PoseIndex + 1;
+					break;
+				}
+			}
+
+			PoseIndex = MaxIndex;
+
+			while (true)
+			{
+				++PoseIndex;
+
+				if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < LimitMinHeight)
+				{
+					HitSec.EndFrame = PoseIndex + 1;
+					break;
+				}
+			}
+
+			HitSec.BeginFrame = (HitSec.BeginFrame + MaxIndex) * 0.5f;
+			//HitSec.EndFrame = (HitSec.EndFrame + MaxIndex) * 0.5f;
+			HitSec.EndFrame = MaxIndex;
+
+			if (HitSec.BeginFrame < HitSec.EndFrame)
+			{
+				HitSections.Add(HitSec);
+			}
+		}
+
+		if (HitSections.Num() > 0)
+		{
+			AnimHitSections.Add(AnimPoseInfo.Key, HitSections);
+		}
+
+		TArray<int32> MatchFrames;
+
+		int NumHit = HitSections.Num();
+		for (int32 IdxHit = 0; IdxHit <= NumHit; ++IdxHit)
+		{
+			int32 BeginFrame = 0;
+			if (IdxHit > 0)
+			{
+				BeginFrame = HitSections[IdxHit - 1].EndFrame;
+			}
+
+			int32 EndFrame = PoseMatchInfos.Num();
+			if (IdxHit < NumHit)
+			{
+				EndFrame = HitSections[IdxHit].BeginFrame;
+			}
+
+			float MinCost = FLT_MAX;
+			int32 MinFrame = -1;
+
+			for (int32 Frame = BeginFrame; Frame < EndFrame; ++Frame)
+			{
+				float Cost = CalcMatchCost(PoseMatchInfos[Frame], IdleMatchInfo);
+
+				if (Cost < MinCost)
+				{
+					MinCost = Cost;
+					MinFrame = Frame;
+				}
+			}
+
+			if (MinFrame >= 0)
+			{
+				MatchFrames.Add(MinFrame);
+			}
+		}
+
+		if (MatchFrames.Num() > 0)
+		{
+			AnimMatchFrames.Add(AnimPoseInfo.Key, MatchFrames);
+		}
+
+		TArray<FMotionClip> MotionClips;
+
+		int32 NumMatch = MatchFrames.Num();
+		for (int32 IdxMatch = 1; IdxMatch < NumMatch; ++IdxMatch)
+		{
+			FMotionClip MotionClip;
+			{
+				MotionClip.BeginFrame = MatchFrames[IdxMatch - 1];
+				MotionClip.EndFrame = MatchFrames[IdxMatch];
+			}
+
+			int32 NumHit = HitSections.Num();
+			for (int32 IdxHit = 0; IdxHit < NumHit; ++IdxHit)
+			{
+				int32 HitBegin = HitSections[IdxHit].BeginFrame;
+				int32 HitEnd = HitSections[IdxHit].EndFrame;
+
+				if (MotionClip.BeginFrame < HitBegin && HitEnd < MotionClip.EndFrame)
+				{
+					MotionClip.HitBeginFrame = HitBegin;
+					MotionClip.HitEndFrame = HitEnd;
+				}
+			}
+
+			MotionClips.Add(MotionClip);
+		}
+
+		if (MotionClips.Num() > 0)
+		{
+			AnimMotionClips.Add(AnimPoseInfo.Key, MotionClips);
+		}
+	}
+}
+
 
 
 /*

@@ -33,7 +33,10 @@ struct VIRTUALBALLMANAGER_API FAnimNode_VBM : public FAnimNode_Base
 	FColor BoneColor = FColor::Black;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
-	float LimitVel = 200.f;
+	float LimitMaxHeight = 40.f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float LimitMinHeight = 15.f;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
 	bool ShowDebugInfo = false;
@@ -101,7 +104,8 @@ protected:
 
 	float CalcMatchCost(const FPoseMatchInfo& CurMatchInfo, const FPoseMatchInfo& NextMatchInfo);
 
-	void AnalyzeMotion(const FPoseMatchInfo& MatchInfo);
+	void AnalyzeMotionByLeftFoot(const FPoseMatchInfo& IdleMatchInfo);
+	void AnalyzeMotionByRightFoot(const FPoseMatchInfo& IdleMatchInfo);
 
 	bool CanBeTransition();
 
@@ -131,7 +135,6 @@ protected:
 
 protected:
 
-	TMap<UAnimSequence*, TArray<int32>> AnimHitFrames;
 	TMap<UAnimSequence*, TArray<int32>> AnimMatchFrames;
 	TMap<UAnimSequence*, TArray<FHitSection>> AnimHitSections;
 	TMap<UAnimSequence*, TArray<FPoseMatchInfo>> AnimPoseInfos;

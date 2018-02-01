@@ -61,6 +61,16 @@ void AVBM_Pawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 }
 
 //-------------------------------------------------------------------------------------------------
+void AVBM_Pawn::CreateNextPlayer()
+{
+	if (pAnimNode != NULL)
+	{
+		TArray<FVector> Trajectory;
+		pAnimNode->CreateNextPlayer(this, Trajectory);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 void AVBM_Pawn::CreateNextPlayer(const TArray<FVector>& Trajectory)
 {
 	if (pAnimNode != NULL)

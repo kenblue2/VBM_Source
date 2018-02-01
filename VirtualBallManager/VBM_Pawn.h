@@ -28,6 +28,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	void CreateNextPlayer();
 	void CreateNextPlayer(const TArray<FVector>& Trajectory);
 
 	void PlayHitMotion();
