@@ -54,7 +54,7 @@ public:
 
 	TMap<const UAnimSequence*, TArray<int32>> AnimHitFrames;
 	TMap<const UAnimSequence*, TArray<int32>> AnimMatchFrames;
-	TMap<const UAnimSequence*, TArray<FHitSection>> AnimHitSections;
+	TMap<const UAnimSequence*, TArray<FAnimSection>> AnimHitSections;
 	TMap<const UAnimSequence*, TArray<FPoseMatchInfo>> AnimPoseInfos;
 
 	TArray<FAnimPlayer> AnimPlayers;

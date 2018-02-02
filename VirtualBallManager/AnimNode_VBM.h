@@ -104,8 +104,7 @@ protected:
 
 	float CalcMatchCost(const FPoseMatchInfo& CurMatchInfo, const FPoseMatchInfo& NextMatchInfo);
 
-	void AnalyzeMotionByLeftFoot(const FPoseMatchInfo& IdleMatchInfo);
-	void AnalyzeMotionByRightFoot(const FPoseMatchInfo& IdleMatchInfo);
+	void AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBoneContainer& RequiredBones);
 
 	bool CanBeTransition();
 
@@ -136,7 +135,7 @@ protected:
 protected:
 
 	TMap<UAnimSequence*, TArray<int32>> AnimMatchFrames;
-	TMap<UAnimSequence*, TArray<FHitSection>> AnimHitSections;
+	TMap<UAnimSequence*, TArray<FAnimSection>> AnimHitSections;
 	TMap<UAnimSequence*, TArray<FPoseMatchInfo>> AnimPoseInfos;
 	TMap<UAnimSequence*, TArray<FMotionClip>> AnimMotionClips;
 
@@ -150,7 +149,7 @@ protected:
 
 	TArray<TArray<FVector>> BallTrajectories;
 
-	FHitSection SelectedHitSec;
+	FAnimSection SelectedHitSec;
 
 	FAnimPlayer NextAnimPlayer;
 

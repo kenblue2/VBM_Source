@@ -46,35 +46,31 @@ void AVBM_HUDBase::DrawHUD()
 	}
 	*/
 	
-	//AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
-	//if (pGameMode == NULL || pGameMode->PoseVelList.Num() == 0)
-	//	return;
-
-	//int32 NumPoses = pGameMode->PoseVelList.Num();
-	//for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
-	//{
-	//	const TArray<FVector>& PreVels = pGameMode->PoseVelList[PoseIndex - 1];
-	//	const TArray<FVector>& CurVels = pGameMode->PoseVelList[PoseIndex];
-
-	//	float Y1 = MidY - PreVels[18].Size();
-	//	float Y2 = MidY - CurVels[18].Size();
-
-	//	float LimitY = MidY - pGameMode->LimitSpeed;
-
-	//	DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::White);
-	//	DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
-	//	DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::Gray);
-	//}
-
 	AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
-	if (pGameMode == NULL || pGameMode->PosePosList.Num() == 0)
+	if (pGameMode == NULL || pGameMode->PoseVelList.Num() == 0)
 		return;
+
+	/*int32 NumPoses = pGameMode->PoseVelList.Num();
+	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)
+	{
+		const TArray<FVector>& PreVels = pGameMode->PoseVelList[PoseIndex - 1];
+		const TArray<FVector>& CurVels = pGameMode->PoseVelList[PoseIndex];
+
+		float Y1 = MidY - PreVels[18].Size();
+		float Y2 = MidY - CurVels[18].Size();
+
+		float LimitY = MidY - pGameMode->LimitSpeed;
+
+		DrawLine((PoseIndex - 1) * 10.f, Y1, PoseIndex * 10.f, Y2, FColor::White);
+		DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
+		DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::Gray);
+	}
 
 	float LimitMinY = ViewSize.Y - pGameMode->LimitMinHeight * ScaleY;
 	float LimitMaxY = ViewSize.Y - pGameMode->LimitMaxHeight * ScaleY;
 
 	DrawLine(0, LimitMinY, ViewSize.X, LimitMinY, FLinearColor::Blue);
-	DrawLine(0, LimitMaxY, ViewSize.X, LimitMaxY, FLinearColor::Red);
+	DrawLine(0, LimitMaxY, ViewSize.X, LimitMaxY, FLinearColor::Red);*/
 
 	int32 NumPoses = pGameMode->PosePosList.Num();
 	for (int32 PoseIndex = 1; PoseIndex < NumPoses; ++PoseIndex)

@@ -88,6 +88,7 @@ public:
 
 	void SelectPoseMatchByUser(int32 BoneIndex);
 	void SelectPoseMatchByUser2(int32 BoneIndex);
+	void SelectPoseMatchByUser3(int32 BoneIndex);
 
 public:
 

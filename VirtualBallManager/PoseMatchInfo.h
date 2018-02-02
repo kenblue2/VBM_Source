@@ -2,11 +2,12 @@
 
 
 //-------------------------------------------------------------------------------------------------
-struct FHitSection
+struct FAnimSection
 {
-	FHitSection() : BeginFrame(-1), EndFrame(-1) {}
+	FAnimSection() : BeginFrame(-1), EndFrame(-1) {}
 
 	int32 BeginFrame;
+	int32 MaxFrame;
 	int32 EndFrame;
 };
 
@@ -64,6 +65,19 @@ struct FMotionClip
 
 	int32 HitBeginFrame;
 	int32 HitEndFrame;
+
+	int32 MoveBeginFrame;
+	int32 MoveEndFrame;
+
+	int32 MoveMidFrame;
+
+	float Angle1;
+	float Angle2;
+
+	float MoveDist;
+	float MaxSpeed;
+
+	bool bAttack;
 };
 
 
@@ -83,6 +97,8 @@ struct FAnimPlayer
 	struct FTransform Align;
 
 	FMotionClip MotionClip;
+
+	FVector HitEndDir;
 
 public:
 

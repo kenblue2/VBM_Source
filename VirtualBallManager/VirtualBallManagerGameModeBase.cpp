@@ -270,8 +270,8 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			PoseVelList.RemoveAt(0);
 		}
 
-		SelectPoseMatchByUser2(NUI_SKELETON_POSITION_ANKLE_LEFT);
-		SelectPoseMatchByUser2(NUI_SKELETON_POSITION_ANKLE_RIGHT);
+		SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_LEFT);
+		SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_RIGHT);
 
 		bReceivePose = false;
 	}
@@ -296,7 +296,7 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 
 		for (const FVector& BallPos : BallCtrl.BallTrajectory)
 		{
-			DrawDebugSphere(GetWorld(), BallPos, 15.f, 8, FColor::Black);
+			DrawDebugSphere(GetWorld(), BallPos, 2.f, 8, FColor::Black);
 		}
 	}
 
@@ -321,12 +321,15 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	{
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
-		
+
 		//PassOrders[1]->CreateNextPlayer();
 		PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1]);
 
-		PassOrders[0]->TimeError += DeltaSeconds;
-		PassOrders[0]->PlayHitMotion();
+		if (PassOrders[0]->pDestPawn != NULL)
+		{
+			PassOrders[0]->TimeError += DeltaSeconds;
+			PassOrders[0]->PlayHitMotion();
+		}
 
 		FBallController BallCtrl;
 		{
@@ -342,8 +345,16 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[0]->pDestPawn = NULL;
 		
 		PassOrders.RemoveAt(0);
-		bUseLeftFootList.RemoveAt(0);
-		FootTrajectories.RemoveAt(0);
+
+		if (bUseLeftFootList.Num() > 0)
+		{
+			bUseLeftFootList.RemoveAt(0);
+		}
+		
+		if (FootTrajectories.Num() > 0)
+		{
+			FootTrajectories.RemoveAt(0);
+		}
 	}
 }
 
@@ -490,8 +501,7 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser(int32 BoneIndex)
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser2(int32 BoneIndex)
 {
-	bool bHitBall = false;
-	FHitSection HitSec;
+	FAnimSection HitSec;
 
 	int32 NumPose = PosePosList.Num();
 	if (NumPose < 2)
@@ -534,6 +544,105 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser2(int32 BoneIndex)
 
 	if (MaxPoseIndex < 0 || HitSec.BeginFrame < 0 || HitSec.EndFrame <= HitSec.BeginFrame)
 		return;
+
+	FootTrajectory.Empty();
+	for (int32 PoseIndex = HitSec.BeginFrame; PoseIndex < HitSec.EndFrame; ++PoseIndex)
+	{
+		FVector FootPos = PosePosList[PoseIndex][BoneIndex];
+		FootTrajectory.Add(FootPos);
+	}
+
+	if (FootTrajectory.Num() > 0)
+	{
+		FootTrajectories.Add(FootTrajectory);
+
+		if (BoneIndex == NUI_SKELETON_POSITION_ANKLE_LEFT)
+		{
+			bUseLeftFootList.Add(true);
+		}
+		else
+		{
+			bUseLeftFootList.Add(false);
+		}
+	}
+
+	PosePosList.Empty();
+	PoseVelList.Empty();
+}
+
+//-------------------------------------------------------------------------------------------------
+void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser3(int32 BoneIndex)
+{
+	FAnimSection HitSec;
+
+	int32 NumPose = PosePosList.Num();
+	if (NumPose < 2)
+		return;
+
+	float PreBoneHeight = PosePosList[NumPose - 2][BoneIndex].Z;
+	float CurBoneHeight = PosePosList[NumPose - 1][BoneIndex].Z;
+
+	if (PreBoneHeight > LimitMinHeight && CurBoneHeight < LimitMinHeight)
+	{
+		HitSec.EndFrame = NumPose - 1;
+	}
+	else
+	{
+		return;
+	}
+
+	float MaxHeight = 0.f;
+	int32 MaxPoseIndex = -1;
+
+	for (int32 IdxPose = HitSec.EndFrame; IdxPose > 1; --IdxPose)
+	{
+		float CurBoneHeight = PosePosList[IdxPose][BoneIndex].Z;
+		//float PreBoneHeight = PosePosList[IdxPose - 1][BoneIndex].Z;
+
+		if (CurBoneHeight > LimitMaxHeight)
+		{
+			if (MaxHeight < CurBoneHeight)
+			{
+				MaxHeight = CurBoneHeight;
+				MaxPoseIndex = IdxPose;
+			}
+		}
+
+		if (MaxPoseIndex > 0 && CurBoneHeight < LimitMinHeight)
+		{
+			HitSec.BeginFrame = IdxPose;
+			break;
+		}
+	}
+
+	if (MaxPoseIndex < 0 || HitSec.BeginFrame < 0 || HitSec.EndFrame <= HitSec.BeginFrame)
+		return;
+
+	for (int32 IdxPose = HitSec.BeginFrame; IdxPose > 0; --IdxPose)
+	{
+		float CurHeight = PosePosList[IdxPose][BoneIndex].Z;
+		float PreHeight = PosePosList[IdxPose - 1][BoneIndex].Z;
+
+		if (PreHeight > CurHeight)
+		{
+			HitSec.BeginFrame = IdxPose;
+			break;
+		}
+	}
+
+	for (int32 IdxPose = HitSec.EndFrame; IdxPose < NumPose; ++IdxPose)
+	{
+		float CurHeight = PosePosList[IdxPose][BoneIndex].Z;
+		float PreHeight = PosePosList[IdxPose - 1][BoneIndex].Z;
+
+		if (PreHeight < CurHeight)
+		{
+			HitSec.EndFrame = IdxPose;
+			break;
+		}
+	}
+
+	HitSec.EndFrame = PosePosList.Num();
 
 	FootTrajectory.Empty();
 	for (int32 PoseIndex = HitSec.BeginFrame; PoseIndex < HitSec.EndFrame; ++PoseIndex)
