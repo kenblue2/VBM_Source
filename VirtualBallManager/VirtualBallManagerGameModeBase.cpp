@@ -228,6 +228,8 @@ void DrawMatchInfo(const FPoseMatchInfo& MatchInfo)
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
 	DrawPose(BonePosList);
 
 	/*for (const FVector& FootPos: FootTrajectory)
@@ -287,20 +289,21 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	}
 
 	// show current ball trajectory
-	for (auto& BallCtrl : BallCtrls)
-	{
-		if (BallCtrl.BallTrajectory.Num() == 0 ||
-			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
-			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
-			continue;
+	//for (auto& BallCtrl : BallCtrls)
+	//{
+	//	if (BallCtrl.BallTrajectory.Num() == 0 ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+	//		continue;
 
-		for (const FVector& BallPos : BallCtrl.BallTrajectory)
-		{
-			DrawDebugSphere(GetWorld(), BallPos, 2.f, 8, FColor::Black);
-		}
-	}
+	//	for (const FVector& BallPos : BallCtrl.BallTrajectory)
+	//	{
+	//		DrawDebugSphere(GetWorld(), BallPos, 2.f, 8, FColor::Black);
+	//	}
+	//}
 
 	if (PassOrders.Num() < 3 || FootTrajectories.Num() < 2)
+	//if (PassOrders.Num() < 3)
 		return;
 
 	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
