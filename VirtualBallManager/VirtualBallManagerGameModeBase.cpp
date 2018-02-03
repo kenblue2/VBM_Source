@@ -228,6 +228,8 @@ void DrawMatchInfo(const FPoseMatchInfo& MatchInfo)
 //-------------------------------------------------------------------------------------------------
 void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 {
+	Super::Tick(DeltaSeconds);
+
 	DrawPose(BonePosList);
 
 	/*for (const FVector& FootPos: FootTrajectory)

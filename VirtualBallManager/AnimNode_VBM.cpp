@@ -771,6 +771,9 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn)
 {
+	if (NextAnimPlayer.pAnim == NULL)
+		return;
+
 	bIdleState = false;
 
 	NextAnimPlayer.Time += pPawn->TimeError;
