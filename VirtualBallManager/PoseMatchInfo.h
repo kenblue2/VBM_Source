@@ -78,6 +78,9 @@ struct FMotionClip
 	float MaxSpeed;
 
 	bool bAttack;
+
+	FVector MoveDir1;
+	FVector MoveDir2;
 };
 
 

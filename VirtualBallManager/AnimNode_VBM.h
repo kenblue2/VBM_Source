@@ -56,6 +56,19 @@ struct VIRTUALBALLMANAGER_API FAnimNode_VBM : public FAnimNode_Base
 	UPROPERTY(EditAnywhere, Category = Settings)
 	float BallRadius = 17.f;
 
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float MoveWeight = 1.f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float HitAngleWeight = 100.f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float MoveAngleWeight = 100.f;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	float DistWeight = 1.f;
+	
+
 public:
 
 	FAnimNode_VBM();
@@ -173,5 +186,15 @@ public:
 	TArray<FVector> BestTrajectory;
 	
 	TArray<FPoseMatchInfo> BestPoseMatchInfos;
+
+private:
+
+	FVector NextHitFrontDir;
+
+	FVector FootMoveDir1;
+	FVector FootMoveDir2;
+
+	FVector UserMoveDir1;
+	FVector UserMoveDir2;
 };
 
