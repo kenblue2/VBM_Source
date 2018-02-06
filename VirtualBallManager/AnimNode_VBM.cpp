@@ -95,7 +95,7 @@ void FAnimNode_VBM::Evaluate_AnyThread(FPoseContext& Output)
 			if (Player.pAnim == NULL)
 				continue;
 
-			Player.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(Player.Time));
+			Player.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(Player.Time), true);
 
 			AnimPose[FCompactPoseBoneIndex(0)] *= Player.Align;
 
@@ -252,7 +252,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 			//DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
 		}
 
-		if (ShowDebugInfo)
+		if (ShowDebugInfo && 0.f < BallTime && BallTime < BallEndTime)
 		{
 			if (RemainedTime > 0.f)
 			{
@@ -273,7 +273,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				const FVector& HitVel = NextHitVels[IdxHit];
 
 				DrawDebugPoint(GWorld, HitPos, 5.f, FColor::Cyan);
-				DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Magenta);
+				DrawDebugLine(GWorld, HitPos, HitPos + HitVel, FColor::Cyan);
 			}
 
 			for (auto& BallTrajectory : BallTrajectories)
@@ -373,13 +373,19 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	//	DrawDebugLine(GWorld, PlayerPos, pVBMPawn->pPrevPawn->PlayerPos, FColor::Red, false, -1, 0, 1);
 	//}
 
-	FVector PlayerPos = pVBMPawn->PlayerPos;
+	/*FVector PlayerPos = pVBMPawn->PlayerPos;
 
 	DrawDebugLine(GWorld, PlayerPos, PlayerPos + UserMoveDir1, FColor::Red, false, -1, 0, 2);
 	DrawDebugLine(GWorld, PlayerPos + UserMoveDir1, PlayerPos + UserMoveDir1 + UserMoveDir2, FColor::Red, false, -1, 0, 2);
 
 	DrawDebugLine(GWorld, PlayerPos, PlayerPos + FootMoveDir1, FColor::Blue, false, -1, 0, 2);
-	DrawDebugLine(GWorld, PlayerPos + FootMoveDir1, PlayerPos + FootMoveDir1 + FootMoveDir2, FColor::Blue, false, -1, 0, 2);
+	DrawDebugLine(GWorld, PlayerPos + FootMoveDir1, PlayerPos + FootMoveDir1 + FootMoveDir2, FColor::Blue, false, -1, 0, 2);*/
+
+	//if (Anims.IsValidIndex(AnimIndex) && Anims[AnimIndex])
+	//{
+	//	DrawPoseMatchInfo(Anims[AnimIndex]);
+	//	DrawAnimPoses(Anims[AnimIndex], BoneContainer);
+	//}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -622,6 +628,23 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 		if (pNextAnim == NULL)
 			continue;
 
+		int32 NumTracks = pNextAnim->GetRawAnimationData().Num();
+
+		for (int32 IdxTrack = 0; IdxTrack < NumTracks; ++IdxTrack)
+		{
+			FRawAnimSequenceTrack& AnimTrack = pNextAnim->GetRawAnimationTrack(IdxTrack);
+
+			for (FVector& Pos : AnimTrack.PosKeys)
+			{
+				Pos = FVector::ZeroVector;
+			}
+
+			for (FQuat& Rot : AnimTrack.RotKeys)
+			{
+				Rot = FQuat::Identity;
+			}
+		}
+
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
 		if (pMatchInfos == NULL)
 			continue;
@@ -817,6 +840,153 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 				}
 			}
 		}
+	}
+
+	NextAnimPlayer = MinPlayer;
+
+	CreateNextHitInfo(NextAnimPlayer, pPawn, BoneContainer);
+}
+
+//-------------------------------------------------------------------------------------------------
+void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 MotionType)
+{
+	FVector PlayerPos = pPawn->PlayerPos;
+	FVector DestPos = pPawn->pDestPawn->PlayerPos;
+
+	FVector PassDir = (DestPos - PlayerPos).GetSafeNormal2D();
+
+	float MinCost = FLT_MAX;
+	FAnimPlayer MinPlayer;
+
+	// select motion clip
+	for (auto& AnimMotionClip : AnimMotionClips)
+	{
+		UAnimSequence* pNextAnim = AnimMotionClip.Key;
+		if (pNextAnim == NULL)
+			continue;
+
+		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
+		if (pMatchInfos == NULL)
+			continue;
+
+		if (bUseLeftFoot == true && pNextAnim->BoneName != FName("Left_Ankle_Joint_01"))
+			continue;
+
+		if (bUseLeftFoot == false && pNextAnim->BoneName != FName("Right_Ankle_Joint_01"))
+			continue;
+
+		if (MotionType == 1 && pNextAnim->GetName().Contains(FString("Attack")) == false)
+			continue;
+
+		if (MotionType == 2 && pNextAnim->GetName().Contains(FString("Pass")) == false)
+			continue;
+
+		if (MotionType == 3 && pNextAnim->GetName().Contains(FString("Toss")) == false)
+			continue;
+
+		if (MotionType != 1 && pNextAnim->GetName().Contains(FString("Attack")))
+			continue;
+
+		if (MotionType != 2 && pNextAnim->GetName().Contains(FString("Pass")))
+			continue;
+
+		if (MotionType != 3 && pNextAnim->GetName().Contains(FString("Toss")))
+			continue;
+
+
+		FBlendedCurve EmptyCurve;
+
+		FCompactPose AnimPose;
+		AnimPose.SetBoneContainer(&BoneContainer);
+
+		for (auto& MotionClip : AnimMotionClip.Value)
+		{
+			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
+
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
+			{
+				NextPlayer.MotionClip = MotionClip;
+				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
+			}
+
+			TArray<FVector> ClipTrajectory;
+
+			for (int32 Frame = MotionClip.HitBeginFrame; Frame < MotionClip.HitEndFrame; ++Frame)
+			{
+				float MoveAngle = 0.f;
+				FVector NextFrontDir;
+
+				if (pPawn->pPrevPawn)
+				{
+					float HitTime = NextPlayer.pAnim->GetTimeAtFrame(Frame);
+					NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(HitTime));
+					NextFrontDir = NextPlayer.Align.TransformVector(CalcFrontDir(AnimPose));
+
+					FVector BallMoveDir = pPawn->pPrevPawn->PlayerPos - pPawn->PlayerPos;
+
+					MoveAngle = FMath::Acos(BallMoveDir.GetSafeNormal2D() | NextFrontDir.GetSafeNormal2D());
+				}
+
+				float HitTime = pNextAnim->GetTimeAtFrame(Frame);
+
+				const FPoseMatchInfo& CurMatchPose = (*pMatchInfos)[Frame - 1];
+
+				FVector HitDir;
+				float FootSpeed;
+				if (pNextAnim->BoneName == FName("Right_Ankle_Joint_01"))
+				{
+					FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
+					FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Knee_Joint_01"), BoneContainer);
+					FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Right_Toe_Joint_01"), BoneContainer);
+
+					HitDir = ((ToePos - AnklePos) ^ (KneePos - AnklePos)).GetSafeNormal();
+					FootSpeed = CurMatchPose.RightFootVel.Size();
+				}
+				else
+				{
+					FVector AnklePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Ankle_Joint_01"), BoneContainer);
+					FVector KneePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Knee_Joint_01"), BoneContainer);
+					FVector ToePos = CalcBoneCSLocation(pNextAnim, HitTime, FName("Left_Toe_Joint_01"), BoneContainer);
+
+					HitDir = ((KneePos - AnklePos) ^ (ToePos - AnklePos)).GetSafeNormal();
+					FootSpeed = CurMatchPose.LeftFootVel.Size();
+				}
+
+				HitDir = NextPlayer.Align.TransformVector(HitDir);
+
+				{
+					FVector HitVel = HitDir * FootSpeed;
+
+					TArray<FVector> BallTrajectory;
+					GenerateBallTrajectory(BallTrajectory, pPawn->PlayerPos, HitVel);
+
+					if (BallTrajectory.Num() == 0)
+						continue;
+
+					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
+					float HitAngle = FMath::Acos(PassDir | HitDir);
+
+					float Cost =
+						Dist * DistWeight +
+						HitAngle * HitAngleWeight +
+						MoveAngle * MoveAngleWeight;
+
+					if (MinCost > Cost)
+					{
+						MinCost = Cost;
+						MinPlayer = NextPlayer;
+						BestTrajectory = ClipTrajectory;
+						//BestPoseMatchInfos = ClipMatchInfos;
+						NextHitFrontDir = NextFrontDir;
+					}
+				}
+			}
+		}
+	}
+
+	if (MinPlayer.pAnim == NULL)
+	{
+		return;
 	}
 
 	NextAnimPlayer = MinPlayer;
@@ -1502,7 +1672,7 @@ void FAnimNode_VBM::DrawPose(const FCompactPose& Pose, const FColor& Color)
 		FVector Pos1 = CSPose.GetComponentSpaceTransform(FCompactPoseBoneIndex(IdxBone)).GetTranslation();
 		FVector Pos2 = CSPose.GetComponentSpaceTransform(ParentBoneIndex).GetTranslation();
 
-		DrawDebugLine(GWorld, Pos1, Pos2, Color, false, -1.f, 0, 3.f);
+		DrawDebugLine(GWorld, Pos1, Pos2, Color, false, -1, 0);
 	}
 }
 
@@ -1678,8 +1848,8 @@ void FAnimNode_VBM::GeneratePoseMatchInfo(FCompactPose& PrevPose, FCompactPose& 
 		CurFrontDir = (Dir1 ^ Dir2).GetSafeNormal2D();
 	}
 
-	float AlignedDegree;
-	FTransform AlignTransform;
+	float AlignedDegree = 0.f;
+	FTransform AlignTransform = FTransform::Identity;
 	{
 		FVector AlignPos = CurPose[RootPoseIndex].GetTranslation();
 		AlignPos.Z = 0.f;
@@ -1728,17 +1898,23 @@ void FAnimNode_VBM::DrawPoseMatchInfo(const TArray<FPoseMatchInfo>& MatchInfos)
 	int32 NumInfos = MatchInfos.Num();
 	EndFrame = FMath::Min(EndFrame, NumInfos);
 
-	for (int32 IdxInfo = BeginFrame; IdxInfo < EndFrame; IdxInfo += FrameStep)
+	for (int32 IdxInfo = BeginFrame - 1; IdxInfo < EndFrame; IdxInfo += FrameStep)
 	{
+		if (IdxInfo < 0)
+			continue;
+
 		const FPoseMatchInfo& MatchInfo = MatchInfos[IdxInfo];
 
-		DrawDebugLine(GWorld, FVector::ZeroVector, MatchInfo.RootVel, FColor::Black);
+		DrawDebugLine(GWorld, MatchInfo.RootPos, MatchInfo.RootPos + MatchInfo.RootVel, FColor::Black);
 		DrawDebugLine(GWorld, MatchInfo.LeftFootPos, MatchInfo.LeftFootPos + MatchInfo.LeftFootVel, FColor::Magenta);
 		DrawDebugLine(GWorld, MatchInfo.RightFootPos, MatchInfo.RightFootPos + MatchInfo.RightFootVel, FColor::Red);
+		DrawDebugLine(GWorld, MatchInfo.LeftHandPos, MatchInfo.LeftHandPos + MatchInfo.LeftHandVel, FColor::Purple);
+		DrawDebugLine(GWorld, MatchInfo.RightHandPos, MatchInfo.RightHandPos + MatchInfo.RightHandVel, FColor::Blue);
 
+		DrawDebugPoint(GWorld, MatchInfo.RootPos, 5, FColor::Black);
 		DrawDebugPoint(GWorld, MatchInfo.LeftFootPos, 5, FColor::Magenta);
 		DrawDebugPoint(GWorld, MatchInfo.RightFootPos, 5, FColor::Red);
-		DrawDebugPoint(GWorld, MatchInfo.LeftHandPos, 5, FColor::Cyan);
+		DrawDebugPoint(GWorld, MatchInfo.LeftHandPos, 5, FColor::Purple);
 		DrawDebugPoint(GWorld, MatchInfo.RightHandPos, 5, FColor::Blue);
 	}
 }
@@ -1804,7 +1980,9 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 
 	for (const auto& AnimPoseInfo : AnimPoseInfos)
 	{
-		if (AnimPoseInfo.Key->BoneName == FName("Right_Ankle_Joint_01"))
+		UAnimSequence* pAnim = AnimPoseInfo.Key;
+
+		if (pAnim->BoneName == FName("Right_Ankle_Joint_01"))
 		{
 			bUseLeftFoot = false;
 		}
@@ -1863,7 +2041,7 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 
 				if (bUseLeftFoot)
 				{
-					if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < LimitMinHeight)
+					if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < pAnim->LimitMinPos)
 					{
 						HitSec.BeginFrame = PoseIndex + 1;
 						break;
@@ -1871,7 +2049,7 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 				}
 				else
 				{
-					if (PoseMatchInfos[PoseIndex].RightFootPos.Z < LimitMinHeight)
+					if (PoseMatchInfos[PoseIndex].RightFootPos.Z < pAnim->LimitMinPos)
 					{
 						HitSec.BeginFrame = PoseIndex + 1;
 						break;
@@ -1887,7 +2065,7 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 
 				if (bUseLeftFoot)
 				{
-					if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < LimitMinHeight)
+					if (PoseMatchInfos[PoseIndex].LeftFootPos.Z < pAnim->LimitMaxPos)
 					{
 						HitSec.EndFrame = PoseIndex + 1;
 						break;
@@ -1895,7 +2073,7 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 				}
 				else
 				{
-					if (PoseMatchInfos[PoseIndex].RightFootPos.Z < LimitMinHeight)
+					if (PoseMatchInfos[PoseIndex].RightFootPos.Z < pAnim->LimitMaxPos)
 					{
 						HitSec.EndFrame = PoseIndex + 1;
 						break;
@@ -1903,17 +2081,46 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 				}
 			}
 
+			int32 MaxFrame = -1;
+			float MaxSpeed = 0.f;
+
+			for (int32 Frame = HitSec.BeginFrame - 10; Frame < MaxIndex; ++Frame)
+			{
+				float Speed;
+
+				if (bUseLeftFoot)
+				{
+					Speed = PoseMatchInfos[Frame].LeftFootVel.Size();
+				}
+				else
+				{
+					Speed = PoseMatchInfos[Frame].RightFootVel.Size();
+				}
+
+				if (MaxSpeed < Speed)
+				{
+					MaxSpeed = Speed;
+					MaxFrame = Frame;
+				}
+			}
+
+			check(MaxFrame >= 0);
+
 			//HitSec.EndFrame = (HitSec.EndFrame + MaxIndex) * 0.5f;
-			if (AnimPoseInfo.Key->GetName().Contains(FString("Attack")))
-			{
-				HitSec.BeginFrame = MaxIndex - 3;
-				HitSec.EndFrame = MaxIndex + 3;
-			}
-			else
-			{
-				HitSec.BeginFrame = (HitSec.BeginFrame + MaxIndex) / 2;
-				HitSec.EndFrame = MaxIndex;
-			}
+			//if (AnimPoseInfo.Key->GetName().Contains(FString("Attack")))
+			//{
+			//	HitSec.BeginFrame = MaxIndex - 3;
+			//	HitSec.EndFrame = MaxIndex + 3;
+			//}
+			//else
+			//{
+			//	HitSec.BeginFrame = (HitSec.BeginFrame + MaxIndex) / 2;
+			//	HitSec.EndFrame = MaxIndex;
+			//}
+
+			//HitSec.BeginFrame = HitSec.BeginFrame - 1;
+			HitSec.BeginFrame = MaxFrame;
+			HitSec.EndFrame = MaxIndex;
 
 			if (HitSec.BeginFrame < HitSec.EndFrame)
 			{

@@ -26,6 +26,19 @@ class VIRTUALBALLMANAGER_API AVBM_HUDBase : public AHUD
 	UPROPERTY(EditAnywhere, Category = Settings)
 	FName BoneName = "Right_Ankle_Joint_01";
 
+	UPROPERTY(EditAnywhere, Category = Settings)
+	bool ShowPosGraph = true;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	bool ShowVelGraph = true;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	bool ShowCandidate = true;
+
+	UPROPERTY(EditAnywhere, Category = Settings)
+	bool ShowMotionClip = true;
+	
+
 public:
 
 	UFUNCTION(BlueprintCallable)

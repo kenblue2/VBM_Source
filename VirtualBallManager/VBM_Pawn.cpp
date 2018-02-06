@@ -66,7 +66,7 @@ void AVBM_Pawn::CreateNextPlayer()
 	if (pAnimNode != NULL)
 	{
 		TArray<FVector> Trajectory;
-		pAnimNode->CreateNextPlayer(this, Trajectory, false);
+		pAnimNode->CreateNextPlayer(this, Trajectory, rand() % 2);
 	}
 }
 

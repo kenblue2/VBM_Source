@@ -104,6 +104,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	int32 MaxUserFrame = 100;
 
+	TArray<int32> MotionTypes;
 	TArray<bool> bUseLeftFootList;
 	TArray<TArray<FVector>> FootTrajectories;
 

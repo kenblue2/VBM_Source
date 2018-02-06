@@ -41,6 +41,18 @@ typedef enum _NUI_SKELETON_POSITION_INDEX
 } 	NUI_SKELETON_POSITION_INDEX;
 
 
+struct FReceiveInfo
+{
+	bool bAttack;
+	bool bPass;
+	bool bToss;
+	bool bUseLeftFoot;
+
+	FVector MotionVectors[5];
+};
+
+FReceiveInfo ReceiveInfo;
+
 SOCKET serv_sock;
 
 
@@ -55,7 +67,7 @@ bool bReceivePose = false;
 void __cdecl RecvThread(void * p)
 {
 	SOCKET sock = (SOCKET)p;
-	char buf[1024];
+	char buf[2048];
 	while (true)
 	{
 		while (bReceivePose);
@@ -69,17 +81,23 @@ void __cdecl RecvThread(void * p)
 		buf[recvsize] = '\0';
 		//printf("\rserver >> %s\n>> ", buf);
 
-		FVector CurPosList[NUI_SKELETON_POSITION_COUNT];
-		memcpy(&CurPosList[0], buf, sizeof(CurPosList));
+		//FVector CurPosList[NUI_SKELETON_POSITION_COUNT];
+		//memcpy(&CurPosList[0], buf, sizeof(CurPosList));
+		memcpy(&ReceiveInfo, buf, sizeof(ReceiveInfo));
+		
+		//for (int i = 0; i < NUI_SKELETON_POSITION_COUNT; ++i)
+		//{
+		//	CurPosList[i] = ReceiveInfo.BonePosList[i];
+		//}
 
-		BonePosList.SetNum(NUI_SKELETON_POSITION_COUNT);
-		BoneVelList.SetNum(NUI_SKELETON_POSITION_COUNT);
+		//BonePosList.SetNum(NUI_SKELETON_POSITION_COUNT);
+		//BoneVelList.SetNum(NUI_SKELETON_POSITION_COUNT);
 
-		for (int32 BoneIdx = 0; BoneIdx < BoneVelList.Num(); ++BoneIdx)
-		{
-			BoneVelList[BoneIdx] = (CurPosList[BoneIdx] - BonePosList[BoneIdx]) * 30.f;
-			BonePosList[BoneIdx] = CurPosList[BoneIdx];
-		}
+		//for (int32 BoneIdx = 0; BoneIdx < BoneVelList.Num(); ++BoneIdx)
+		//{
+		//	BoneVelList[BoneIdx] = (CurPosList[BoneIdx] - BonePosList[BoneIdx]) * 30.f;
+		//	BonePosList[BoneIdx] = CurPosList[BoneIdx];
+		//}
 
 		bReceivePose = true;
 	}
@@ -263,17 +281,43 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 
 	if (bReceivePose)
 	{
-		PosePosList.Add(BonePosList);
-		PoseVelList.Add(BoneVelList);
+		//PosePosList.Add(BonePosList);
+		//PoseVelList.Add(BoneVelList);
 
-		if (PosePosList.Num() > MaxUserFrame)
+		//if (PosePosList.Num() > MaxUserFrame)
+		//{
+		//	PosePosList.RemoveAt(0);
+		//	PoseVelList.RemoveAt(0);
+		//}
+
+		//SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_LEFT);
+		//SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_RIGHT);
+
+		if (ReceiveInfo.bAttack)
 		{
-			PosePosList.RemoveAt(0);
-			PoseVelList.RemoveAt(0);
+			MotionTypes.Add(1);
+		}
+		else if (ReceiveInfo.bPass)
+		{
+			MotionTypes.Add(2);
+		}
+		else if (ReceiveInfo.bToss)
+		{
+			MotionTypes.Add(3);
+		}
+		else
+		{
+			MotionTypes.Add(0);
 		}
 
-		SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_LEFT);
-		SelectPoseMatchByUser3(NUI_SKELETON_POSITION_ANKLE_RIGHT);
+		if (ReceiveInfo.bUseLeftFoot)
+		{
+			bUseLeftFootList.Add(true);
+		}
+		else
+		{
+			bUseLeftFootList.Add(false);
+		}
 
 		bReceivePose = false;
 	}
@@ -289,21 +333,37 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	}
 
 	// show current ball trajectory
-	//for (auto& BallCtrl : BallCtrls)
-	//{
-	//	if (BallCtrl.BallTrajectory.Num() == 0 ||
-	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
-	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
-	//		continue;
+	for (auto& BallCtrl : BallCtrls)
+	{
+		if (BallCtrl.BallTrajectory.Num() == 0 ||
+			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+			continue;
 
-	//	for (const FVector& BallPos : BallCtrl.BallTrajectory)
-	//	{
-	//		DrawDebugSphere(GetWorld(), BallPos, 2.f, 8, FColor::Black);
-	//	}
-	//}
+		//for (const FVector& BallPos : BallCtrl.BallTrajectory)
+		for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
+		{
+			FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
+			FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
 
-	if (PassOrders.Num() < 3 || FootTrajectories.Num() < 2)
-	//if (PassOrders.Num() < 3)
+			DrawDebugLine(GWorld, Pos1, Pos2, FColor::Black, false, -1.f, 0, 3.f);
+		}
+	}
+
+	if (PassOrders.Num() > 2)
+	{
+		FVector Pos1 = PassOrders[0]->PlayerPos;
+		FVector Pos2 = PassOrders[1]->PlayerPos;
+		FVector Pos3 = PassOrders[2]->PlayerPos;
+
+		DrawDebugLine(GWorld, Pos1, Pos2, FColor::Cyan, false, -1.f, 0, 3.f);
+		DrawDebugLine(GWorld, Pos2, Pos3, FColor::Cyan, false, -1.f, 0, 3.f);
+		DrawDebugSphere(GetWorld(), Pos2, 50.f, 8, FColor::Orange);
+		//DrawDebugSphere(GetWorld(), Pos3, 50.f, 8, FColor::Cyan);
+	}
+	
+	//if (PassOrders.Num() < 3 || bUseLeftFootList.Num() < 2 || MotionTypes.Num() < 2)
+	if (PassOrders.Num() < 3)
 		return;
 
 	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
@@ -312,12 +372,19 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		return;
 	}
 
+	
+
 	if (PassOrders[0]->pDestPawn == NULL && PassOrders[0]->bBeginNextMotion == false)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
 		
-		//PassOrders[0]->CreateNextPlayer();
-		PassOrders[0]->CreateNextPlayer(FootTrajectories[0], bUseLeftFootList[0]);
+		PassOrders[0]->CreateNextPlayer();
+		//PassOrders[0]->CreateNextPlayer(FootTrajectories[0], bUseLeftFootList[0]);
+
+		//if (PassOrders[0]->pAnimNode)
+		//{
+		//	PassOrders[0]->pAnimNode->CreateNextPlayer(PassOrders[0], bUseLeftFootList[0], MotionTypes[0]);
+		//}
 	}
 
 	if (PassOrders[1]->pDestPawn == NULL)
@@ -325,8 +392,14 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
 
-		//PassOrders[1]->CreateNextPlayer();
-		PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1]);
+		PassOrders[1]->CreateNextPlayer();
+		//PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1], MotionTypes[1]);
+
+		//if (PassOrders[1]->pAnimNode)
+		//{
+		//	PassOrders[1]->pAnimNode->CreateNextPlayer(PassOrders[1], bUseLeftFootList[1], MotionTypes[1]);
+		//}
+		
 
 		if (PassOrders[0]->pDestPawn != NULL)
 		{
@@ -349,14 +422,14 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		
 		PassOrders.RemoveAt(0);
 
+		if (MotionTypes.Num() > 0)
+		{
+			MotionTypes.RemoveAt(0);
+		}
+
 		if (bUseLeftFootList.Num() > 0)
 		{
 			bUseLeftFootList.RemoveAt(0);
-		}
-		
-		if (FootTrajectories.Num() > 0)
-		{
-			FootTrajectories.RemoveAt(0);
 		}
 	}
 }

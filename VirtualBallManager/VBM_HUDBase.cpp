@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "VBM_HUDBase.h"
+#include "VBM_Pawn.h"
+#include "AnimNode_VBM.h"
 #include "Animation/AnimInstance.h"
 #include "VirtualBallManagerGameModeBase.h"
 
@@ -17,34 +19,157 @@ void AVBM_HUDBase::DrawHUD()
 	GWorld->GetGameViewport()->GetViewportSize(ViewSize);
 
 	float MidY = ViewSize.Y * 0.5f;
-	/*
-	if (BoneVels.Num() > 0)
+	float DeltaX = float(ViewSize.X) / float(Anim->NumFrames);
+
+	int32 AnimIndex = 0;
+
+	auto PawnIt = GWorld->GetPawnIterator();
+	AVBM_Pawn* pVBMPawn = Cast<AVBM_Pawn>(PawnIt->Get());
+	if (pVBMPawn && pVBMPawn->pAnimNode)
 	{
-		for (int32 IdxVel = 1; IdxVel < BoneVels.Num(); ++IdxVel)
+		FAnimNode_VBM* pNode = pVBMPawn->pAnimNode;
+
+		float Y1 = ViewSize.Y - Anim->LimitMinPos * Anim->GraphScale;
+		float Y2 = ViewSize.Y - Anim->LimitMaxPos * Anim->GraphScale;
+
+		if (ShowPosGraph && ShowVelGraph == false)
 		{
-			float X1 = (IdxVel - 1) * 2.f;
-			float X2 = (IdxVel    ) * 2.f;
-
-			float Y1 = MidY - BoneVels[IdxVel - 1] * ScaleY;
-			float Y2 = MidY - BoneVels[IdxVel    ] * ScaleY;
-
-			DrawLine(X1, Y1, X2, Y2, FLinearColor::Black, 1.f);
+			//DrawLine(0, Y1, ViewSize.X, Y1, FLinearColor::Gray);
+			DrawLine(0, Y2, ViewSize.X, Y2, FLinearColor::Gray);
 		}
 
-		float LimitY = MidY - LimitVel * ScaleY;
-
-		DrawLine(0, LimitY, ViewSize.X, LimitY, FLinearColor::Red);
-		DrawLine(0, MidY, ViewSize.X, MidY, FLinearColor::White);
-
-		for (int32 HitFrame : HitFrames)
+		TArray<FPoseMatchInfo>* pMatchInfos = pNode->AnimPoseInfos.Find(Anim);
+		if (pMatchInfos)
 		{
-			float X = (HitFrame - 1) * 2.f;
-			float Y = MidY - BoneVels[HitFrame - 1] * ScaleY;
+			if (ShowPosGraph || ShowCandidate)
+			{
+				if (Anim->BoneName == FName("Left_Ankle_Joint_01"))
+				{
+					for (int32 PoseIndex = 1; PoseIndex < pMatchInfos->Num(); ++PoseIndex)
+					{
+						const FVector& PreBonePos = (*pMatchInfos)[PoseIndex - 1].LeftFootPos;
+						const FVector& CurBonePos = (*pMatchInfos)[PoseIndex].LeftFootPos;
 
-			DrawRect(FLinearColor::Red, X - 3, Y - 3, 7, 7);
+						float Y1 = ViewSize.Y - PreBonePos.Z * Anim->GraphScale - 40.f;
+						float Y2 = ViewSize.Y - CurBonePos.Z * Anim->GraphScale - 40.f;
+
+						DrawLine((PoseIndex - 1) * DeltaX, Y1, PoseIndex * DeltaX, Y2, FColor::Black, 1);
+					}
+				}
+				else if (Anim->BoneName == FName("Right_Ankle_Joint_01"))
+				{
+					for (int32 PoseIndex = 1; PoseIndex < pMatchInfos->Num(); ++PoseIndex)
+					{
+						const FVector& PreBonePos = (*pMatchInfos)[PoseIndex - 1].RightFootPos;
+						const FVector& CurBonePos = (*pMatchInfos)[PoseIndex].RightFootPos;
+
+						float Y1 = ViewSize.Y - PreBonePos.Z * Anim->GraphScale - 40.f;
+						float Y2 = ViewSize.Y - CurBonePos.Z * Anim->GraphScale - 40.f;
+
+						DrawLine((PoseIndex - 1) * DeltaX, Y1, PoseIndex * DeltaX, Y2, FColor::Black, 1);
+					}
+				}
+			}
+			
+			if (ShowVelGraph)
+			{
+				if (Anim->BoneName == FName("Left_Ankle_Joint_01"))
+				{
+					for (int32 PoseIndex = 1; PoseIndex < pMatchInfos->Num(); ++PoseIndex)
+					{
+						const FVector& PreBonePos = (*pMatchInfos)[PoseIndex - 1].LeftFootVel;
+						const FVector& CurBonePos = (*pMatchInfos)[PoseIndex].LeftFootVel;
+
+						float Y1 = ViewSize.Y - PreBonePos.Size() / 10.f * Anim->GraphScale - 40.f;
+						float Y2 = ViewSize.Y - CurBonePos.Size() / 10.f * Anim->GraphScale - 40.f;
+
+						DrawLine((PoseIndex - 1) * DeltaX, Y1, PoseIndex * DeltaX, Y2, FColor::Purple, 1);
+					}
+				}
+				else if (Anim->BoneName == FName("Right_Ankle_Joint_01"))
+				{
+					for (int32 PoseIndex = 1; PoseIndex < pMatchInfos->Num(); ++PoseIndex)
+					{
+						const FVector& PreBonePos = (*pMatchInfos)[PoseIndex - 1].RightFootVel;
+						const FVector& CurBonePos = (*pMatchInfos)[PoseIndex].RightFootVel;
+
+						float Y1 = ViewSize.Y - PreBonePos.Size() / 10.f * Anim->GraphScale - 40.f;
+						float Y2 = ViewSize.Y - CurBonePos.Size() / 10.f * Anim->GraphScale - 40.f;
+
+						DrawLine((PoseIndex - 1) * DeltaX, Y1, PoseIndex * DeltaX, Y2, FColor::Purple, 1);
+					}
+				}
+			}
+		}
+
+		TArray<FMotionClip>* pMotionClips = pNode->AnimMotionClips.Find(Anim);
+		if (pMotionClips)
+		{
+			for (int32 IdxClip = 0; IdxClip < pMotionClips->Num(); ++IdxClip)
+			{
+				float BeginPos2 = (*pMotionClips)[IdxClip].HitBeginFrame;
+				float EndPos2 = (*pMotionClips)[IdxClip].HitEndFrame;
+
+				if (ShowVelGraph)
+				{
+					DrawLine(BeginPos2 * DeltaX, 0, BeginPos2 * DeltaX, ViewSize.Y, FColor::Magenta);
+				}
+				
+				if (ShowPosGraph)
+				{
+					DrawLine(EndPos2 * DeltaX, 0, EndPos2 * DeltaX, ViewSize.Y, FColor::Red);
+				}
+
+				if (ShowVelGraph && ShowPosGraph)
+				{
+					DrawLine(BeginPos2 * DeltaX, ViewSize.Y - 20.f, EndPos2 * DeltaX, ViewSize.Y - 20.f, FColor::Red, 7);
+				}
+			}
+
+			if (ShowVelGraph && ShowPosGraph)
+			{
+				DrawLine(0, ViewSize.Y - 20.f, ViewSize.X, ViewSize.Y - 20.f, FColor::Black, 3);
+			}
+
+			if (ShowCandidate)
+			{
+				float Y1 = ViewSize.Y - 20.f;
+
+				for (int32 IdxClip = 0; IdxClip < pMotionClips->Num(); ++IdxClip)
+				{
+					float BeginPos2 = (*pMotionClips)[IdxClip].MoveBeginFrame;
+					float EndPos2 = (*pMotionClips)[IdxClip].MoveEndFrame;
+
+					float X1 = BeginPos2 * DeltaX;
+					float X2 = EndPos2 * DeltaX;
+
+					DrawLine(X1, 0, X1, ViewSize.Y, FLinearColor::Gray);
+					DrawLine(X2, 0, X2, ViewSize.Y, FLinearColor::Gray);
+
+					DrawLine(X1, Y1, X2, Y1, FColor::Blue, 7);
+				}
+
+				DrawLine(0, Y1, ViewSize.X, Y1, FColor::Black, 3);
+			}
+
+			if (ShowMotionClip)
+			{
+				for (int32 IdxClip = 0; IdxClip < pMotionClips->Num(); ++IdxClip)
+				{
+					float BeginPos = (*pMotionClips)[IdxClip].MoveBeginFrame;
+					float EndPos = (*pMotionClips)[IdxClip].MoveEndFrame;
+
+					float X1 = BeginPos * DeltaX;
+					float X2 = EndPos * DeltaX;
+
+					float Y1 = ViewSize.Y - 200.f;
+					float Y2 = ViewSize.Y - 40.f;
+
+					DrawRect(FLinearColor::Red, X1, Y1, X2 - X1, Y2 - Y1);
+				}
+			}
 		}
 	}
-	*/
 	
 	AVirtualBallManagerGameModeBase* pGameMode = GWorld->GetAuthGameMode<AVirtualBallManagerGameModeBase>();
 	if (pGameMode == NULL || pGameMode->PoseVelList.Num() == 0)
