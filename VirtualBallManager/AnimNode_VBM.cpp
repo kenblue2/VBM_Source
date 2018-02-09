@@ -221,6 +221,115 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 	}
 	else if (PassTrajectory2.Num() > 0)
 	{
+		static bool generate = false;
+
+		if (generate == false)
+		{
+			generate = true;
+
+			FCompactPose CommonPose;
+			CommonPose.SetBoneContainer(&RequiredBones);
+
+			FBlendedCurve EmptyCurve;
+			Anims[0]->GetBonePose(CommonPose, EmptyCurve, FAnimExtractContext(0.f), true);
+
+			for (auto& pAnim : Anims)
+			{
+				TArray<int32>* pMatchFrames = AnimMatchFrames.Find(pAnim);
+
+				TArray<TArray<FQuat>> DeltaRotList;
+
+				for (int IdxMatch = 0; IdxMatch < pMatchFrames->Num(); ++IdxMatch)
+				{
+					int32 MatchFrame = (*pMatchFrames)[IdxMatch];
+
+					TArray<FQuat> DeltaRots;
+
+					int32 IdxBone = 0;
+					{
+						FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(IdxBone);
+						{
+							FQuat DeltaQuat = CommonPose.GetBones()[IdxBone].GetRotation() * AnimTrack.RotKeys[MatchFrame].Inverse();
+							{
+								FRotator DeltaRot = DeltaQuat.Rotator();
+								DeltaRot.Yaw = 0.f;
+
+								DeltaQuat = DeltaRot.Quaternion();
+							}
+							DeltaRots.Add(DeltaQuat);
+
+							AnimTrack.RotKeys[MatchFrame] = DeltaQuat * AnimTrack.RotKeys[MatchFrame];
+						}
+					}
+
+					for (int32 IdxBone = 1; IdxBone < RequiredBones.GetNumBones(); ++IdxBone)
+					{
+						FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(IdxBone);
+						if (AnimTrack.RotKeys.Num() == pAnim->NumFrames)
+						{
+							FQuat DeltaQuat = CommonPose.GetBones()[IdxBone].GetRotation() * AnimTrack.RotKeys[MatchFrame].Inverse();
+
+							DeltaRots.Add(DeltaQuat);
+
+							AnimTrack.RotKeys[MatchFrame] = DeltaQuat * AnimTrack.RotKeys[MatchFrame];
+						}
+					}
+
+					if (DeltaRots.Num() > 0)
+					{
+						DeltaRotList.Add(DeltaRots);
+					}
+				}
+
+				for (int IdxMatch = 1; IdxMatch < pMatchFrames->Num(); ++IdxMatch)
+				{
+					int32 PreMatchFrame = (*pMatchFrames)[IdxMatch - 1];
+					int32 CurMatchFrame = (*pMatchFrames)[IdxMatch];
+
+					int32 IdxRot = 0;
+					/*{
+						FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(IdxRot);
+
+						for (int32 Frame = PreMatchFrame + 1; Frame < CurMatchFrame; ++Frame)
+						{
+							float Alpha = float(Frame - PreMatchFrame) / float(CurMatchFrame - PreMatchFrame);
+
+							FQuat BlendQuat = FQuat::Slerp(DeltaRotList[IdxMatch - 1][IdxRot], DeltaRotList[IdxMatch][IdxRot], Alpha);
+							
+							FRotator BlendRot = BlendQuat.Rotator();
+							BlendRot.Yaw = 0.f;
+
+							AnimTrack.RotKeys[Frame] = BlendRot.Quaternion() * AnimTrack.RotKeys[Frame];
+						}
+
+						++IdxRot;
+					}*/
+
+					for (int32 IdxBone = 0; IdxBone < RequiredBones.GetNumBones(); ++IdxBone)
+					{
+						FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(IdxBone);
+						if (AnimTrack.RotKeys.Num() < pAnim->NumFrames)
+							continue;
+
+						for (int32 Frame = PreMatchFrame + 1; Frame < CurMatchFrame; ++Frame)
+						{
+							float Alpha = float(Frame - PreMatchFrame) / float(CurMatchFrame - PreMatchFrame);
+
+							FQuat BlendQuat = FQuat::Slerp(DeltaRotList[IdxMatch - 1][IdxRot], DeltaRotList[IdxMatch][IdxRot], Alpha);
+
+							AnimTrack.RotKeys[Frame] = BlendQuat * AnimTrack.RotKeys[Frame];
+						}
+
+						++IdxRot;
+					}
+				}
+			}
+		}
+
+		
+
+
+
 		float RemainedTime = BallEndTime - BallTime;
 
 		if (pVBMPawn->pDestPawn != NULL)
@@ -628,23 +737,6 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 		if (pNextAnim == NULL)
 			continue;
 
-		int32 NumTracks = pNextAnim->GetRawAnimationData().Num();
-
-		for (int32 IdxTrack = 0; IdxTrack < NumTracks; ++IdxTrack)
-		{
-			FRawAnimSequenceTrack& AnimTrack = pNextAnim->GetRawAnimationTrack(IdxTrack);
-
-			for (FVector& Pos : AnimTrack.PosKeys)
-			{
-				Pos = FVector::ZeroVector;
-			}
-
-			for (FQuat& Rot : AnimTrack.RotKeys)
-			{
-				Rot = FQuat::Identity;
-			}
-		}
-
 		TArray<FPoseMatchInfo>* pMatchInfos = AnimPoseInfos.Find(pNextAnim);
 		if (pMatchInfos == NULL)
 			continue;
@@ -719,7 +811,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 		{
 			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
 
-			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime, 0.f, 1.f);
 			{
 				NextPlayer.MotionClip = MotionClip;
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
@@ -774,7 +866,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 				if (pPawn->pPrevPawn)
 				{
 					float HitTime = NextPlayer.pAnim->GetTimeAtFrame(Frame);
-					NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(HitTime));
+					NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(HitTime), true);
 					NextFrontDir = NextPlayer.Align.TransformVector(CalcFrontDir(AnimPose));
 
 					FVector BallMoveDir = pPawn->pPrevPawn->PlayerPos - pPawn->PlayerPos;
@@ -903,7 +995,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 		{
 			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
 
-			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime, 0.f, 1.f);
 			{
 				NextPlayer.MotionClip = MotionClip;
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
@@ -919,7 +1011,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 				if (pPawn->pPrevPawn)
 				{
 					float HitTime = NextPlayer.pAnim->GetTimeAtFrame(Frame);
-					NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(HitTime));
+					NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(HitTime), true);
 					NextFrontDir = NextPlayer.Align.TransformVector(CalcFrontDir(AnimPose));
 
 					FVector BallMoveDir = pPawn->pPrevPawn->PlayerPos - pPawn->PlayerPos;
@@ -1005,7 +1097,7 @@ void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn)
 	NextAnimPlayer.Time += pPawn->TimeError;
 	BallTime = BallBeginTime + pPawn->TimeError;
 
-	AnimPlayers.Last().Stop();
+	AnimPlayers.Last().Stop(0.f);
 	AnimPlayers.Add(NextAnimPlayer);
 
 	GenerateBallTrajectory(PassTrajectory2, pPawn->HitBallPos, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
@@ -1112,7 +1204,7 @@ FTransform FAnimNode_VBM::CalcAlignTransoform(const FAnimPlayer& NextPlayer, con
 	const FAnimPlayer& CurPlayer = AnimPlayers.Last();
 
 	float EndTime = CurPlayer.pAnim->GetTimeAtFrame(CurPlayer.MotionClip.EndFrame);
-	CurPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(EndTime));
+	CurPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(EndTime), true);
 
 	FVector CurFrontDir = CalcFrontDir(AnimPose);
 	CurFrontDir = CurPlayer.Align.TransformVector(CurFrontDir);
@@ -1121,7 +1213,7 @@ FTransform FAnimNode_VBM::CalcAlignTransoform(const FAnimPlayer& NextPlayer, con
 	FVector CurHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
 
 	float BeginTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.BeginFrame);
-	NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(BeginTime));
+	NextPlayer.pAnim->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(BeginTime), true);
 
 	FVector NextFrontDir = CalcFrontDir(AnimPose);
 	FVector NextHipPos = AnimPose[FCompactPoseBoneIndex(0)].GetTranslation();
@@ -1690,7 +1782,7 @@ void FAnimNode_VBM::DrawAnimPoses(UAnimSequence* pAnimSeq, const FBoneContainer&
 	{
 		float AnimTime = pAnimSeq->GetTimeAtFrame(IdxFrame);
 
-		pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime));
+		pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime), true);
 
 		AlignPose(pAnimSeq->GetSkeleton(), AnimPose);
 		DrawPose(AnimPose, BoneColor);
@@ -1709,7 +1801,7 @@ void FAnimNode_VBM::DrawAnimPoses(UAnimSequence* pAnimSeq, const FBoneContainer&
 	{
 		float AnimTime = pAnimSeq->GetTimeAtFrame(IdxFrame);
 
-		pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime));
+		pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime), true);
 
 		AnimPose[FCompactPoseBoneIndex(0)] *= Align;
 
@@ -1725,7 +1817,7 @@ FTransform FAnimNode_VBM::CalcBoneCSTransform(const UAnimSequence* pAnimSeq, flo
 	FCompactPose AnimPose;
 	AnimPose.SetBoneContainer(&BoneCont);
 
-	pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime));
+	pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime), true);
 
 	FCSPose<FCompactPose> CSPose;
 	CSPose.InitPose(AnimPose);
@@ -1745,7 +1837,7 @@ FVector FAnimNode_VBM::CalcBoneCSLocation(const UAnimSequence* pAnimSeq, float A
 	FCompactPose AnimPose;
 	AnimPose.SetBoneContainer(&BoneCont);
 
-	pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime));
+	pAnimSeq->GetBonePose(AnimPose, EmptyCurve, FAnimExtractContext(AnimTime), true);
 
 	FCSPose<FCompactPose> CSPose;
 	CSPose.InitPose(AnimPose);
@@ -1776,8 +1868,8 @@ void FAnimNode_VBM::GeneratePoseMatchInfos(UAnimSequence* pAnimSeq, const FBoneC
 		float PrevAnimTime = pAnimSeq->GetTimeAtFrame(IdxFrame - 1);
 		float CurAnimTime = pAnimSeq->GetTimeAtFrame(IdxFrame);
 
-		pAnimSeq->GetBonePose(PrevAnimPose, EmptyCurve, FAnimExtractContext(PrevAnimTime));
-		pAnimSeq->GetBonePose(CurAnimPose, EmptyCurve, FAnimExtractContext(CurAnimTime));
+		pAnimSeq->GetBonePose(PrevAnimPose, EmptyCurve, FAnimExtractContext(PrevAnimTime), true);
+		pAnimSeq->GetBonePose(CurAnimPose, EmptyCurve, FAnimExtractContext(CurAnimTime), true);
 
 		FPoseMatchInfo MatchInfo;
 		GeneratePoseMatchInfo(PrevAnimPose, CurAnimPose, MatchInfo);
@@ -2359,7 +2451,6 @@ void FAnimNode_VBM::AnalyzeMotion(const FPoseMatchInfo& IdleMatchInfo, const FBo
 		}
 	}
 }
-
 
 
 /*
