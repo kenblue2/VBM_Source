@@ -103,6 +103,8 @@ struct FAnimPlayer
 
 	FVector HitEndDir;
 
+	int32 HitFrame;
+
 public:
 
 	FAnimPlayer()
@@ -110,6 +112,7 @@ public:
 		, pAnim(NULL)
 		, Weight(0.f)
 		, Align(FTransform::Identity)
+		, HitFrame(-1)
 	{
 	}
 

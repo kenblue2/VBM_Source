@@ -333,34 +333,34 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	}
 
 	// show current ball trajectory
-	for (auto& BallCtrl : BallCtrls)
-	{
-		if (BallCtrl.BallTrajectory.Num() == 0 ||
-			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
-			BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
-			continue;
+	//for (auto& BallCtrl : BallCtrls)
+	//{
+	//	if (BallCtrl.BallTrajectory.Num() == 0 ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+	//		continue;
 
-		//for (const FVector& BallPos : BallCtrl.BallTrajectory)
-		for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
-		{
-			FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
-			FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
+	//	//for (const FVector& BallPos : BallCtrl.BallTrajectory)
+	//	for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
+	//	{
+	//		FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
+	//		FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
 
-			DrawDebugLine(GWorld, Pos1, Pos2, FColor::Black, false, -1.f, 0, 3.f);
-		}
-	}
+	//		DrawDebugLine(GWorld, Pos1, Pos2, FColor::Black, false, -1.f, 0, 3.f);
+	//	}
+	//}
 
-	if (PassOrders.Num() > 2)
-	{
-		FVector Pos1 = PassOrders[0]->PlayerPos;
-		FVector Pos2 = PassOrders[1]->PlayerPos;
-		FVector Pos3 = PassOrders[2]->PlayerPos;
+	//if (PassOrders.Num() > 2)
+	//{
+	//	FVector Pos1 = PassOrders[0]->PlayerPos;
+	//	FVector Pos2 = PassOrders[1]->PlayerPos;
+	//	FVector Pos3 = PassOrders[2]->PlayerPos;
 
-		DrawDebugLine(GWorld, Pos1, Pos2, FColor::Cyan, false, -1.f, 0, 3.f);
-		DrawDebugLine(GWorld, Pos2, Pos3, FColor::Cyan, false, -1.f, 0, 3.f);
-		DrawDebugSphere(GetWorld(), Pos2, 50.f, 8, FColor::Orange);
-		//DrawDebugSphere(GetWorld(), Pos3, 50.f, 8, FColor::Cyan);
-	}
+	//	DrawDebugLine(GWorld, Pos1, Pos2, FColor::Cyan, false, -1.f, 0, 3.f);
+	//	DrawDebugLine(GWorld, Pos2, Pos3, FColor::Cyan, false, -1.f, 0, 3.f);
+	//	DrawDebugSphere(GetWorld(), Pos2, 50.f, 8, FColor::Orange);
+	//	//DrawDebugSphere(GetWorld(), Pos3, 50.f, 8, FColor::Cyan);
+	//}
 	
 	//if (PassOrders.Num() < 3 || bUseLeftFootList.Num() < 2 || MotionTypes.Num() < 2)
 	if (PassOrders.Num() < 3)

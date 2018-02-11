@@ -139,7 +139,7 @@ protected:
 
 	FTransform CalcAlignTransoform(const FAnimPlayer& NextPlayer, const FBoneContainer& RequiredBones);
 
-	void AdjustBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginVel, const FVector& EndPos);
+	void AdjustBallTrajectory(TArray<FVector>& OutTrajectory, const FVector& BeginVel, const FVector& EndPos, int32 LimitFrame);
 
 	FVector GetMaxHitVel(UAnimSequence* pAnim, const FMotionClip& Clip, const FBoneContainer& RequiredBones);
 
@@ -177,6 +177,7 @@ public:
 	float BallTime;
 	float BallEndTime;
 	float BallBeginTime;
+	float BallRestTime;
 
 	FVector BallPos;
 

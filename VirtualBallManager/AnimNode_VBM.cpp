@@ -18,6 +18,7 @@ FAnimNode_VBM::FAnimNode_VBM()
 	: BallTime(-1.f)
 	, bMoveBall(false)
 	, bIdleState(false)
+	, BallRestTime(0.f)
 {
 }
 
@@ -194,33 +195,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 		//}
 
 		AnalyzeMotion(IdleMatchInfo, RequiredBones);
-	}
 
-	if (AnimPlayers.Num() <= 0)
-	{
-		TArray<UAnimSequence*> pAnims;
-		AnimMotionClips.GetKeys(pAnims);
-
-		if (pAnims.Num() > 0)
-		{
-			UAnimSequence* pAnim = pAnims[rand() % pAnims.Num()];
-			TArray<FMotionClip>* pMotionClips = AnimMotionClips.Find(pAnim);
-
-			if (pMotionClips != NULL && pMotionClips->Num() > 0)
-			{
-				FMotionClip CurClip = (*pMotionClips)[rand() % pMotionClips->Num()];
-				//float BeginTime = pAnim->GetTimeAtFrame(CurClip.BeginFrame);
-				float BeginTime = pAnim->GetTimeAtFrame(CurClip.EndFrame);
-
-				FAnimPlayer AnimPlayer(pAnim, BeginTime, 0.3f, 1.f);
-				AnimPlayer.MotionClip = CurClip;
-
-				AnimPlayers.Add(AnimPlayer);
-			}
-		}
-	}
-	else if (PassTrajectory2.Num() > 0)
-	{
 		static bool generate = false;
 
 		if (generate == false)
@@ -238,6 +213,7 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				TArray<int32>* pMatchFrames = AnimMatchFrames.Find(pAnim);
 
 				TArray<TArray<FQuat>> DeltaRotList;
+				TArray<float> DeltaRootHeights;
 
 				for (int IdxMatch = 0; IdxMatch < pMatchFrames->Num(); ++IdxMatch)
 				{
@@ -259,6 +235,10 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 							DeltaRots.Add(DeltaQuat);
 
 							AnimTrack.RotKeys[MatchFrame] = DeltaQuat * AnimTrack.RotKeys[MatchFrame];
+
+							float DeltaHeight = CommonPose.GetBones()[IdxBone].GetTranslation().Z - AnimTrack.PosKeys[MatchFrame].Z;
+
+							DeltaRootHeights.Add(DeltaHeight);
 						}
 					}
 
@@ -287,23 +267,18 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 					int32 CurMatchFrame = (*pMatchFrames)[IdxMatch];
 
 					int32 IdxRot = 0;
-					/*{
-						FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(IdxRot);
 
+					FRawAnimSequenceTrack& AnimTrack = pAnim->GetRawAnimationTrack(0);
+					{
 						for (int32 Frame = PreMatchFrame + 1; Frame < CurMatchFrame; ++Frame)
 						{
 							float Alpha = float(Frame - PreMatchFrame) / float(CurMatchFrame - PreMatchFrame);
 
-							FQuat BlendQuat = FQuat::Slerp(DeltaRotList[IdxMatch - 1][IdxRot], DeltaRotList[IdxMatch][IdxRot], Alpha);
-							
-							FRotator BlendRot = BlendQuat.Rotator();
-							BlendRot.Yaw = 0.f;
+							float BlendHeight = FMath::Lerp(DeltaRootHeights[IdxMatch - 1], DeltaRootHeights[IdxMatch], Alpha);
 
-							AnimTrack.RotKeys[Frame] = BlendRot.Quaternion() * AnimTrack.RotKeys[Frame];
+							AnimTrack.PosKeys[Frame].Z = BlendHeight + AnimTrack.PosKeys[Frame].Z;
 						}
-
-						++IdxRot;
-					}*/
+					}
 
 					for (int32 IdxBone = 0; IdxBone < RequiredBones.GetNumBones(); ++IdxBone)
 					{
@@ -325,11 +300,33 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				}
 			}
 		}
+	}
 
-		
+	if (AnimPlayers.Num() <= 0)
+	{
+		TArray<UAnimSequence*> pAnims;
+		AnimMotionClips.GetKeys(pAnims);
 
+		if (pAnims.Num() > 0)
+		{
+			UAnimSequence* pAnim = pAnims[rand() % pAnims.Num()];
+			TArray<FMotionClip>* pMotionClips = AnimMotionClips.Find(pAnim);
 
+			if (pMotionClips != NULL && pMotionClips->Num() > 0)
+			{
+				FMotionClip CurClip = (*pMotionClips)[rand() % pMotionClips->Num()];
+				//float BeginTime = pAnim->GetTimeAtFrame(CurClip.BeginFrame);
+				float BeginTime = pAnim->GetTimeAtFrame(CurClip.EndFrame);
 
+				FAnimPlayer AnimPlayer(pAnim, BeginTime, 0.3f, 1.f);
+				AnimPlayer.MotionClip = CurClip;
+
+				AnimPlayers.Add(AnimPlayer);
+			}
+		}
+	}
+	else if (PassTrajectory2.Num() > 0)
+	{
 		float RemainedTime = BallEndTime - BallTime;
 
 		if (pVBMPawn->pDestPawn != NULL)
@@ -358,10 +355,11 @@ void FAnimNode_VBM::PreUpdate(const UAnimInstance* InAnimInstance)
 				BallPos = PassTrajectory2.Last();
 			}
 
-			//DrawDebugSphere(GWorld, BallPos, 15.f, 16, FColor::Orange);
+			//DrawDebugSphere(GWorld, BallPos, BallRadius, 32, FColor::Orange);
 		}
 
-		if (ShowDebugInfo && 0.f < BallTime && BallTime < BallEndTime)
+		//if (ShowDebugInfo && 0.f < BallTime && BallTime < BallEndTime)
+		if (ShowDebugInfo)
 		{
 			if (RemainedTime > 0.f)
 			{
@@ -811,7 +809,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 		{
 			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
 
-			FAnimPlayer NextPlayer(pNextAnim, BeginTime, 0.f, 1.f);
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
 			{
 				NextPlayer.MotionClip = MotionClip;
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
@@ -900,6 +898,8 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, const TArray<FVector>& Fo
 				}
 
 				HitDir = NextPlayer.Align.TransformVector(HitDir);
+
+				NextPlayer.HitFrame = Frame;
 
 				{
 					FVector HitVel = HitDir * FootSpeed;
@@ -995,7 +995,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 		{
 			float BeginTime = pNextAnim->GetTimeAtFrame(MotionClip.BeginFrame);
 
-			FAnimPlayer NextPlayer(pNextAnim, BeginTime, 0.f, 1.f);
+			FAnimPlayer NextPlayer(pNextAnim, BeginTime);
 			{
 				NextPlayer.MotionClip = MotionClip;
 				NextPlayer.Align = CalcAlignTransoform(NextPlayer, BoneContainer);
@@ -1046,6 +1046,8 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 
 				HitDir = NextPlayer.Align.TransformVector(HitDir);
 
+				NextPlayer.HitFrame = Frame;
+
 				{
 					FVector HitVel = HitDir * FootSpeed;
 
@@ -1089,19 +1091,20 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 //-------------------------------------------------------------------------------------------------
 void FAnimNode_VBM::PlayHitMotion(AVBM_Pawn* pPawn)
 {
-	if (NextAnimPlayer.pAnim == NULL)
+	if (NextAnimPlayer.pAnim == NULL || pPawn == NULL || pPawn->pDestPawn == NULL || pPawn->pDestPawn->pAnimNode == NULL)
 		return;
 
 	bIdleState = false;
 
-	NextAnimPlayer.Time += pPawn->TimeError;
+	NextAnimPlayer.Time += (pPawn->TimeError + 0.033f);
 	BallTime = BallBeginTime + pPawn->TimeError;
 
-	AnimPlayers.Last().Stop(0.f);
+	AnimPlayers.Last().Stop();
 	AnimPlayers.Add(NextAnimPlayer);
 
 	GenerateBallTrajectory(PassTrajectory2, pPawn->HitBallPos, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
-	AdjustBallTrajectory(PassTrajectory2, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos);
+	//AdjustBallTrajectory(PassTrajectory2, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos, LimitFrame + 2);
+	AdjustBallTrajectory(PassTrajectory2, pPawn->HitBallVel, pPawn->pDestPawn->HitBallPos, 0);
 
 	BallEndTime = float(PassTrajectory2.Num() - 1) * 0.033f;
 
@@ -1334,7 +1337,6 @@ void FAnimNode_VBM::CreateNextHitInfo(
 			float HitTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.HitBeginFrame + IdxHit);
 			float BeginTime = NextPlayer.pAnim->GetTimeAtFrame(NextPlayer.MotionClip.BeginFrame);
 
-			//BallTime = BeginTime - HitTime;
 			BallBeginTime = BeginTime - HitTime;
 			pPawn->HitBallTime = HitTime - BeginTime;
 
@@ -1485,8 +1487,8 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 			USkeletalMeshSocket* pHitSocket = pAnim->GetSkeleton()->FindSocket("Right_Hit_Socket");
 			if (pHitSocket != NULL)
 			{
-				FTransform ToeTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
-				HitPos = (pHitSocket->GetSocketLocalTransform() * ToeTrans).GetTranslation();
+				FTransform AnkleTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Right_Ankle_Joint_01"), BoneContainer);
+				HitPos = (pHitSocket->GetSocketLocalTransform() * AnkleTrans).GetTranslation();
 			}
 		}
 		else
@@ -1502,8 +1504,8 @@ void FAnimNode_VBM::CalcHitDir(UAnimSequence* pAnim, int32 BeginFrame, int32 End
 			USkeletalMeshSocket* pHitSocket = pAnim->GetSkeleton()->FindSocket("Left_Hit_Socket");
 			if (pHitSocket != NULL)
 			{
-				FTransform ToeTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Left_Ankle_Joint_01"), BoneContainer);
-				HitPos = (pHitSocket->GetSocketLocalTransform() * ToeTrans).GetTranslation();
+				FTransform AnkleTrans = CalcBoneCSTransform(pAnim, HitTime, FName("Left_Ankle_Joint_01"), BoneContainer);
+				HitPos = (pHitSocket->GetSocketLocalTransform() * AnkleTrans).GetTranslation();
 			}
 		}
 
@@ -1580,14 +1582,14 @@ void FAnimNode_VBM::GenerateBallTrajectory(TArray<FVector>& OutTrajectory, const
 }
 
 //-------------------------------------------------------------------------------------------------
-void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVector& BeginVel, const FVector& EndPos)
+void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVector& BeginVel, const FVector& EndPos, int32 LimitFrame)
 {
 	int32 NumIter = 0;
 	int32 MaxIter = 10000;
 
 	FVector NewBeginVel = BeginVel;
 
-	while (Trajectory.Num() > 0 && NumIter < MaxIter)
+	while (Trajectory.Num() > 0)
 	{
 		FVector DestPos = Trajectory.Last();
 		FVector DiffPos = DestPos - EndPos;
@@ -1625,17 +1627,33 @@ void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVec
 			break;
 		}
 
+		if ( NumIter > MaxIter)
+		{
+			Trajectory.SetNum(MinIndex + 1);
+			break;
+		}
+
 		FVector DeltaDir = MinDir * 0.01f;
 
-		NewBeginVel += DeltaDir;
-		if (NewBeginVel.Z < 0.f)
+		if (DeltaDir.Z < 0.f)
 		{
-			NewBeginVel.Z = 0.f;
+			DeltaDir.Z = DeltaDir.Size2D() * 0.1f;
 		}
+
+		NewBeginVel += DeltaDir;
 
 		GenerateBallTrajectory(Trajectory, Trajectory[0], NewBeginVel, EndPos);
 
 		++NumIter;
+	}
+
+	FVector PosDiff = EndPos - Trajectory.Last();
+
+	FVector DeltaPos = PosDiff / float(Trajectory.Num() - 1);
+
+	for(int32 IdxPos = 1; IdxPos < Trajectory.Num(); ++IdxPos)
+	{
+		Trajectory[IdxPos] += DeltaPos * IdxPos;
 	}
 }
 
