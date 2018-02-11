@@ -91,6 +91,7 @@ public:
 	/** Override this to perform game-thread work prior to non-game thread Update() being called */
 	virtual void PreUpdate(const UAnimInstance* InAnimInstance);
 
+	void CreateNextPlayer(class AVBM_Pawn* pPawn, int32 MotionType);
 	void CreateNextPlayer(class AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 MotionType);
 	void CreateNextPlayer(class AVBM_Pawn* pPawn, const TArray<FVector>& FootTrajectory, bool bUseLeftFoot);
 

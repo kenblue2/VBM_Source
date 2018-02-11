@@ -96,6 +96,9 @@ public:
 	TArray<class AVBM_Pawn*> PassOrders;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	TArray<int32> MotionTypes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	float LimitMaxHeight = 40.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
@@ -104,7 +107,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	int32 MaxUserFrame = 100;
 
-	TArray<int32> MotionTypes;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	bool ShowDebugInfo = false;
+
+	
 	TArray<bool> bUseLeftFootList;
 	TArray<TArray<FVector>> FootTrajectories;
 

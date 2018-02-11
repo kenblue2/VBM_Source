@@ -332,38 +332,45 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		BallCtrls.RemoveAt(0);
 	}
 
-	// show current ball trajectory
-	//for (auto& BallCtrl : BallCtrls)
-	//{
-	//	if (BallCtrl.BallTrajectory.Num() == 0 ||
-	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
-	//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
-	//		continue;
+	if (ShowDebugInfo)
+	{
+		// show current ball trajectory
+		for (auto& BallCtrl : BallCtrls)
+		{
+			if (BallCtrl.BallTrajectory.Num() == 0 ||
+				BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+				BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+				continue;
 
-	//	//for (const FVector& BallPos : BallCtrl.BallTrajectory)
-	//	for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
-	//	{
-	//		FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
-	//		FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
+			for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
+			{
+				FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
+				FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
 
-	//		DrawDebugLine(GWorld, Pos1, Pos2, FColor::Black, false, -1.f, 0, 3.f);
-	//	}
-	//}
+				DrawDebugLine(GWorld, Pos1, Pos2, FColor::White, false, -1.f, 0, 2.f);
+			}
+		}
 
-	//if (PassOrders.Num() > 2)
-	//{
-	//	FVector Pos1 = PassOrders[0]->PlayerPos;
-	//	FVector Pos2 = PassOrders[1]->PlayerPos;
-	//	FVector Pos3 = PassOrders[2]->PlayerPos;
+		// show pass order
+		if (PassOrders.Num() >= 2)
+		{
+			FVector Pos = PassOrders[0]->PlayerPos;
+			FVector NextPos = PassOrders[1]->PlayerPos;
 
-	//	DrawDebugLine(GWorld, Pos1, Pos2, FColor::Cyan, false, -1.f, 0, 3.f);
-	//	DrawDebugLine(GWorld, Pos2, Pos3, FColor::Cyan, false, -1.f, 0, 3.f);
-	//	DrawDebugSphere(GetWorld(), Pos2, 50.f, 8, FColor::Orange);
-	//	//DrawDebugSphere(GetWorld(), Pos3, 50.f, 8, FColor::Cyan);
-	//}
-	
+			DrawDebugLine(GWorld, Pos, NextPos, FColor::Cyan, false, -1.f, 0, 2.f);
+
+			if (PassOrders[0]->pPrevPawn)
+			{
+				FVector PrevPos = PassOrders[0]->pPrevPawn->PlayerPos;
+
+				DrawDebugLine(GWorld, Pos, PrevPos, FColor::Purple, false, -1.f, 0, 2.f);
+			}
+		}
+	}
+
 	//if (PassOrders.Num() < 3 || bUseLeftFootList.Num() < 2 || MotionTypes.Num() < 2)
-	if (PassOrders.Num() < 3)
+	if (PassOrders.Num() < 3 || MotionTypes.Num() < 2)
+	//if (PassOrders.Num() < 3)
 		return;
 
 	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
@@ -378,7 +385,8 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
 		
-		PassOrders[0]->CreateNextPlayer();
+		//PassOrders[0]->CreateNextPlayer();
+		PassOrders[0]->CreateNextPlayer(MotionTypes[0]);
 		//PassOrders[0]->CreateNextPlayer(FootTrajectories[0], bUseLeftFootList[0]);
 
 		//if (PassOrders[0]->pAnimNode)
@@ -392,7 +400,8 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[1]->pPrevPawn = PassOrders[0];
 		PassOrders[1]->pDestPawn = PassOrders[2];
 
-		PassOrders[1]->CreateNextPlayer();
+		//PassOrders[1]->CreateNextPlayer();
+		PassOrders[1]->CreateNextPlayer(MotionTypes[1]);
 		//PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1], MotionTypes[1]);
 
 		//if (PassOrders[1]->pAnimNode)

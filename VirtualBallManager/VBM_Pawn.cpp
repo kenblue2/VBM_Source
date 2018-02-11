@@ -50,7 +50,7 @@ void AVBM_Pawn::Tick(float DeltaTime)
 		return;
 
 	PlayerPos = pSkelComp->GetBoneLocation(FName("Root"));
-	PlayerPos.Z = 2.f;
+	PlayerPos.Z = 5.f;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -65,8 +65,23 @@ void AVBM_Pawn::CreateNextPlayer()
 {
 	if (pAnimNode != NULL)
 	{
-		TArray<FVector> Trajectory;
-		pAnimNode->CreateNextPlayer(this, Trajectory, rand() % 2);
+		//TArray<FVector> Trajectory;
+		//pAnimNode->CreateNextPlayer(this, Trajectory, rand() % 2);
+		pAnimNode->CreateNextPlayer(this, rand() % 3 + 1);
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+void AVBM_Pawn::CreateNextPlayer(int32 MotionType)
+{
+	if (pAnimNode != NULL)
+	{
+		pAnimNode->CreateNextPlayer(this, MotionType);
+
+		if (pDestPawn)
+		{
+			pDestPawn->bBeginNextMotion = false;
+		}
 	}
 }
 

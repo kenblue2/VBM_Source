@@ -29,6 +29,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	void CreateNextPlayer();
+	void CreateNextPlayer(int32 MotionType);
 	void CreateNextPlayer(const TArray<FVector>& Trajectory, bool bUseLeftFoot);
 
 	void PlayHitMotion();
