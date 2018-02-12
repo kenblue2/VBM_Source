@@ -99,6 +99,9 @@ public:
 	TArray<int32> MotionTypes;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
+	TArray<bool> UseLeftFootList;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
 	float LimitMaxHeight = 40.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VBM_Pawn)
@@ -111,7 +114,6 @@ public:
 	bool ShowDebugInfo = false;
 
 	
-	TArray<bool> bUseLeftFootList;
 	TArray<TArray<FVector>> FootTrajectories;
 
 	TArray<FVector> FootTrajectory;

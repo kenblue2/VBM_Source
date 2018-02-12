@@ -312,11 +312,11 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 
 		if (ReceiveInfo.bUseLeftFoot)
 		{
-			bUseLeftFootList.Add(true);
+			UseLeftFootList.Add(true);
 		}
 		else
 		{
-			bUseLeftFootList.Add(false);
+			UseLeftFootList.Add(false);
 		}
 
 		bReceivePose = false;
@@ -335,21 +335,21 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 	if (ShowDebugInfo)
 	{
 		// show current ball trajectory
-		for (auto& BallCtrl : BallCtrls)
-		{
-			if (BallCtrl.BallTrajectory.Num() == 0 ||
-				BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
-				BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
-				continue;
+		//for (auto& BallCtrl : BallCtrls)
+		//{
+		//	if (BallCtrl.BallTrajectory.Num() == 0 ||
+		//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory[0] ||
+		//		BallCtrl.GetBallPos() == BallCtrl.BallTrajectory.Last())
+		//		continue;
 
-			for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
-			{
-				FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
-				FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
+		//	for (int32 IdxPos = 1; IdxPos < BallCtrl.BallTrajectory.Num(); ++IdxPos)
+		//	{
+		//		FVector Pos1 = BallCtrl.BallTrajectory[IdxPos - 1];
+		//		FVector Pos2 = BallCtrl.BallTrajectory[IdxPos];
 
-				DrawDebugLine(GWorld, Pos1, Pos2, FColor::White, false, -1.f, 0, 2.f);
-			}
-		}
+		//		DrawDebugLine(GWorld, Pos1, Pos2, FColor::White, false, -1.f, 0, 2.f);
+		//	}
+		//}
 
 		// show pass order
 		if (PassOrders.Num() >= 2)
@@ -368,10 +368,12 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		}
 	}
 
-	//if (PassOrders.Num() < 3 || bUseLeftFootList.Num() < 2 || MotionTypes.Num() < 2)
-	if (PassOrders.Num() < 3 || MotionTypes.Num() < 2)
+
 	//if (PassOrders.Num() < 3)
+	//if (PassOrders.Num() < 3 || MotionTypes.Num() < 2)
+	if (PassOrders.Num() < 3 || UseLeftFootList.Num() < 2 || MotionTypes.Num() < 2)
 		return;
+
 
 	if (PassOrders.Last() == PassOrders[PassOrders.Num() - 2])
 	{
@@ -379,20 +381,20 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		return;
 	}
 
-	
 
 	if (PassOrders[0]->pDestPawn == NULL && PassOrders[0]->bBeginNextMotion == false)
 	{
 		PassOrders[0]->pDestPawn = PassOrders[1];
 		
 		//PassOrders[0]->CreateNextPlayer();
-		PassOrders[0]->CreateNextPlayer(MotionTypes[0]);
+		//PassOrders[0]->CreateNextPlayer(MotionTypes[0]);
 		//PassOrders[0]->CreateNextPlayer(FootTrajectories[0], bUseLeftFootList[0]);
 
-		//if (PassOrders[0]->pAnimNode)
-		//{
-		//	PassOrders[0]->pAnimNode->CreateNextPlayer(PassOrders[0], bUseLeftFootList[0], MotionTypes[0]);
-		//}
+		if (PassOrders[0]->pAnimNode)
+		{
+			//PassOrders[0]->pAnimNode->CreateNextPlayer(PassOrders[0], MotionTypes[0]);
+			PassOrders[0]->pAnimNode->CreateNextPlayer(PassOrders[0], UseLeftFootList[0], MotionTypes[0]);
+		}
 	}
 
 	if (PassOrders[1]->pDestPawn == NULL)
@@ -401,13 +403,14 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 		PassOrders[1]->pDestPawn = PassOrders[2];
 
 		//PassOrders[1]->CreateNextPlayer();
-		PassOrders[1]->CreateNextPlayer(MotionTypes[1]);
+		//PassOrders[1]->CreateNextPlayer(MotionTypes[1]);
 		//PassOrders[1]->CreateNextPlayer(FootTrajectories[1], bUseLeftFootList[1], MotionTypes[1]);
 
-		//if (PassOrders[1]->pAnimNode)
-		//{
-		//	PassOrders[1]->pAnimNode->CreateNextPlayer(PassOrders[1], bUseLeftFootList[1], MotionTypes[1]);
-		//}
+		if (PassOrders[1]->pAnimNode)
+		{
+			//PassOrders[1]->pAnimNode->CreateNextPlayer(PassOrders[1], MotionTypes[1]);
+			PassOrders[1]->pAnimNode->CreateNextPlayer(PassOrders[1], UseLeftFootList[1], MotionTypes[1]);
+		}
 		
 
 		if (PassOrders[0]->pDestPawn != NULL)
@@ -436,9 +439,9 @@ void AVirtualBallManagerGameModeBase::Tick(float DeltaSeconds)
 			MotionTypes.RemoveAt(0);
 		}
 
-		if (bUseLeftFootList.Num() > 0)
+		if (UseLeftFootList.Num() > 0)
 		{
-			bUseLeftFootList.RemoveAt(0);
+			UseLeftFootList.RemoveAt(0);
 		}
 	}
 }
@@ -643,11 +646,11 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser2(int32 BoneIndex)
 
 		if (BoneIndex == NUI_SKELETON_POSITION_ANKLE_LEFT)
 		{
-			bUseLeftFootList.Add(true);
+			UseLeftFootList.Add(true);
 		}
 		else
 		{
-			bUseLeftFootList.Add(false);
+			UseLeftFootList.Add(false);
 		}
 	}
 
@@ -742,11 +745,11 @@ void AVirtualBallManagerGameModeBase::SelectPoseMatchByUser3(int32 BoneIndex)
 
 		if (BoneIndex == NUI_SKELETON_POSITION_ANKLE_LEFT)
 		{
-			bUseLeftFootList.Add(true);
+			UseLeftFootList.Add(true);
 		}
 		else
 		{
-			bUseLeftFootList.Add(false);
+			UseLeftFootList.Add(false);
 		}
 	}
 

@@ -136,6 +136,7 @@ bool FAnimNode_VBM::CanBeTransition()
 	return true;
 }
 
+//-------------------------------------------------------------------------------------------------
 void DrawMatchInfo2(const FPoseMatchInfo& MatchInfo)
 {
 	DrawDebugLine(GWorld, MatchInfo.RootPos, MatchInfo.RootPos + MatchInfo.RootVel, FColor::Yellow);
@@ -1050,11 +1051,11 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, int32 MotionType)
 						continue;
 
 					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
-					float HitAngle = FMath::Acos(PassDir | HitDir);
+					float HitAngle = FMath::Acos(PassDir | HitDir.GetSafeNormal2D());
 
-					if (HitAngle > FMath::DegreesToRadians(90.f) ||
-						MoveAngle > FMath::DegreesToRadians(90.f))
-						continue;
+					//if (HitAngle > FMath::DegreesToRadians(120.f) ||
+					//	MoveAngle > FMath::DegreesToRadians(120.f))
+					//	continue;
 
 					float Cost =
 						Dist * DistWeight +
@@ -1103,29 +1104,25 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 		if (pMatchInfos == NULL)
 			continue;
 
-		if (bUseLeftFoot == true && pNextAnim->BoneName != FName("Left_Ankle_Joint_01"))
-			continue;
 
-		if (bUseLeftFoot == false && pNextAnim->BoneName != FName("Right_Ankle_Joint_01"))
+		if ((bUseLeftFoot == true && pNextAnim->BoneName == FName("Left_Ankle_Joint_01")) ||
+			(bUseLeftFoot == false && pNextAnim->BoneName == FName("Right_Ankle_Joint_01")))
+		{
+		}
+		else
+		{
 			continue;
+		}
 
-		if (MotionType == 1 && pNextAnim->GetName().Contains(FString("Attack")) == false)
+		if ((MotionType == 1 && pNextAnim->GetName().Contains(FString("Attack"))) ||
+			(MotionType == 2 && pNextAnim->GetName().Contains(FString("Pass"))) ||
+			(MotionType == 3 && pNextAnim->GetName().Contains(FString("Toss"))))
+		{
+		}
+		else
+		{
 			continue;
-
-		if (MotionType == 2 && pNextAnim->GetName().Contains(FString("Pass")) == false)
-			continue;
-
-		if (MotionType == 3 && pNextAnim->GetName().Contains(FString("Toss")) == false)
-			continue;
-
-		if (MotionType != 1 && pNextAnim->GetName().Contains(FString("Attack")))
-			continue;
-
-		if (MotionType != 2 && pNextAnim->GetName().Contains(FString("Pass")))
-			continue;
-
-		if (MotionType != 3 && pNextAnim->GetName().Contains(FString("Toss")))
-			continue;
+		}
 
 
 		FBlendedCurve EmptyCurve;
@@ -1202,6 +1199,7 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 					float Dist = (BallTrajectory.Last() - pPawn->pDestPawn->PlayerPos).Size();
 					float HitAngle = FMath::Acos(PassDir | HitDir);
 
+
 					float Cost =
 						Dist * DistWeight +
 						HitAngle * HitAngleWeight +
@@ -1212,7 +1210,6 @@ void FAnimNode_VBM::CreateNextPlayer(AVBM_Pawn* pPawn, bool bUseLeftFoot, int32 
 						MinCost = Cost;
 						MinPlayer = NextPlayer;
 						BestTrajectory = ClipTrajectory;
-						//BestPoseMatchInfos = ClipMatchInfos;
 						NextHitFrontDir = NextFrontDir;
 					}
 				}
@@ -1777,7 +1774,7 @@ void FAnimNode_VBM::AdjustBallTrajectory(TArray<FVector>& Trajectory, const FVec
 			break;
 		}
 
-		FVector DeltaDir = NewBeginVel.GetSafeNormal() * MinDir.Size() * 0.05f;
+		FVector DeltaDir = NewBeginVel.GetSafeNormal() * MinDir.Size() * 0.01f;
 
 		if ((NewBeginVel.GetSafeNormal2D() | MinDir.GetSafeNormal2D()) < 0.f)
 		{
